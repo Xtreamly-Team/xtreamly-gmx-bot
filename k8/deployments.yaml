@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: perp-trading-bot-eth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: perp-trading-bot-eth
+  template:
+    metadata:
+      labels:
+        app: perp-trading-bot-eth
+    spec:
+      containers:
+        - name: perp-trading-bot-eth
+          image: us-central1-docker.pkg.dev/xtreamly-ai/long-running/perp-trading-bot:latest
+          ports:
+            - containerPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: perp-trading-bot-sol
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: perp-trading-bot-sol
+  template:
+    metadata:
+      labels:
+        app: perp-trading-bot-sol
+    spec:
+      containers:
+        - name: perp-trading-bot-sol
+          image: us-central1-docker.pkg.dev/xtreamly-ai/long-running/perp-trading-bot:latest
+          ports:
+            - containerPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: perp-trading-bot-btc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: perp-trading-bot-btc
+  template:
+    metadata:
+      labels:
+        app: perp-trading-bot-btc
+    spec:
+      containers:
+        - name: perp-trading-bot-btc
+          image: us-central1-docker.pkg.dev/xtreamly-ai/long-running/perp-trading-bot:latest
+          ports:
+            - containerPort: 8080
+

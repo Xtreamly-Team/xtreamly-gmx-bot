@@ -1,4 +1,4 @@
-class Xtreamly {
+export class Xtreamly {
     private baseUrl: string;
     constructor() {
         this.baseUrl = process.env.XTREAMLY_API_BASE_URL || '';
@@ -18,7 +18,19 @@ class Xtreamly {
             throw new Error(`Error fetching signals: ${res.status} ${res.statusText}`);
         }
         const resObj = await res.json()
-        const signals = JSON.parse(resObj)
+        const signals: Signal[] = JSON.parse(resObj).map((signal: any) => ({
+            symbol: signal.symbol,
+            long: signal.signal_long,
+            short: signal.signal_short,
+            horizon: signal.horizon,
+        }));
         return signals
     }
+}
+
+interface Signal {
+    symbol: string
+    long: boolean
+    short: boolean
+    horizon: number
 }

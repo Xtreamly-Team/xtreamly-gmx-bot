@@ -1,0 +1,46 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: perp-trading-bot-ingress
+  namespace: xtreamly-bots
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - eth.bot.xtreamly.io
+        - sol.bot.xtreamly.io
+        - btc.bot.xtreamly.io
+      secretName: perp-trading-bot-tls
+  rules:
+    - host: eth.bot.xtreamly.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: perp-trading-bot-eth
+                port:
+                  number: 80
+    - host: sol.bot.xtreamly.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: perp-trading-bot-sol
+                port:
+                  number: 80
+    - host: btc.bot.xtreamly.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: perp-trading-bot-btc
+                port:
+                  number: 80
