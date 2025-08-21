@@ -8,7 +8,8 @@ const { arbitrum } = require('viem/chains');
 
 // --- Type imports using ESM (for TS type hints) ---
 import type { GmxSdk as GmxSdkType } from '@gmx-io/sdk';
-import { MarketsInfoData } from '@gmx-io/sdk/build/types/src/types/markets';
+import { MarketInfo, MarketsInfoData } from '@gmx-io/sdk/build/types/src/types/markets';
+import { PositionInfo } from '@gmx-io/sdk/build/types/src/types/positions';
 import { TokensData } from '@gmx-io/sdk/build/types/src/types/tokens';
 import { BigNumber } from 'ethers';
 import type { WalletClient, PublicClient } from 'viem';
@@ -18,17 +19,18 @@ import { erc20Abi } from "viem";
 
 export class GMX {
     private sdk: GmxSdkType;
-    private tokens: Record<string, string> = {
+    private tokenAddresses: Record<string, string> = {
         'WETH': '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
         'WBTC': '0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f',
         'WSOL': '0x2bcC6D6CdBbDC0a4071e48bb3B969b06B3330c07',
         'USDC': '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
     };
-    private markets: Record<string, string> = {
+    private marketAddresses: Record<string, string> = {
         'ETH': '0x70d95587d40A2caf56bd97485aB3Eec10Bee6336',
         'SOL': '0x09400D9DB990D5ed3f35D7be61DfAEB900Af03C9',
         'BTC': '0x7C11F78Ce78768518D743E81Fdfa2F860C6b9A77',
     };
+    private marketInfos: Record<string, MarketInfo> = {};
     private tokensData!: TokensData;
     private marketsInfoData!: MarketsInfoData;
 
@@ -68,46 +70,108 @@ export class GMX {
         }
         this.marketsInfoData = marketsInfoData;
         this.tokensData = tokensData;
+        // console.log(marketsInfoData)
+        return
 
-        // console.log(this.marketsInfoData)
-        // 0x0e46941F9bfF8d0784BFfa3d0D7883CDb82D7aE7
-        // 0x9e79146b3A022Af44E0708c6794F03Ef798381A5
-        // 0x450bb6774Dd8a756274E0ab4107953259d2ac541
-        // 0x70d95587d40A2caf56bd97485aB3Eec10Bee6336
+        // this.marketInfos = Object.fromEntries(
+        //     Object.entries(marketsInfoData).map(([market, marketInfo]) => {
+        //         return [market, marketInfo];
+        //     })
+        // );
 
-        console.log(Object.keys(marketsInfoData).length, "Markets found");
-
-        // TODO: Refresh market addresses based on returned data
-
-        // for (let market of Object.keys(marketsInfoData)) {
-        //     const marketInfo = marketsInfoData[market];
-        //     if (marketInfo.longToken.address.toLowerCase() === this.tokens['WETH'].toLowerCase() &&
-        //         marketInfo.shortToken.address.toLowerCase() === this.tokens['USDC'].toLowerCase()) {
-        //         this.markets['ETH'] = market
-        //     } else if (marketInfo.longToken.address.toLowerCase() === this.tokens['WBTC'].toLowerCase() &&
-        //         marketInfo.shortToken.address.toLowerCase() === this.tokens['USDC'].toLowerCase()) {
-        //         this.markets['BTC'] = market
-        //     } else if (marketInfo.longToken.address.toLowerCase() === this.tokens['WSOL'].toLowerCase() &&
-        //         marketInfo.shortToken.address.toLowerCase() === this.tokens['USDC'].toLowerCase()) {
-        //         this.markets['SOL'] = market
-        //     }
-        // }
-
-        console.log("Markets", this.markets);
     }
 
     _tokenForMarket(market: 'ETH' | 'BTC' | 'SOL'): string {
         switch (market) {
             case 'ETH':
-                return this.tokens['WETH'];
+                return this.tokenAddresses['WETH'];
             case 'BTC':
-                return this.tokens['WBTC'];
+                return this.tokenAddresses['WBTC'];
             case 'SOL':
-                return this.tokens['WSOL'];
+                return this.tokenAddresses['WSOL'];
             default:
                 throw new Error(`Unknown market: ${market}`);
         }
     }
+
+    async _ensureTokenBalanceAndAllowance(amount: bigint) {
+
+        const balance = await this.sdk.publicClient.readContract({
+            abi: erc20Abi,
+            address: this.tokenAddresses['USDC'],
+            functionName: "balanceOf",
+            args: [this.sdk.walletClient.account!.address],
+        });
+
+        if (balance < amount) {
+            console.error("Insufficient balance for USDC, needed:", (amount / 1_000_000n).toString(), "but got:", (balance / 1_000_000n).toString());
+            return false;
+        } else {
+            console.log("Sufficient balance for USDC, needed: ", (amount / 1_000_000n).toString(), " got:", (balance / 1_000_000n).toString());
+        }
+
+        const allowance = await this.sdk.publicClient.readContract({
+            abi: erc20Abi,
+            address: this.tokenAddresses['USDC'],
+            functionName: "allowance",
+            args: [this.sdk.walletClient.account!.address, '0x602b805EedddBbD9ddff44A7dcBD46cb07849685'],
+        });
+        if (allowance >= amount) {
+            return true;
+        }
+        else {
+            console.log("Allowance insufficient. Allowence: ", (allowance / 1_000_000n).toString(), "Needed:", (amount / 1_000_000n).toString());
+            const res = await this.sdk.walletClient.writeContract({
+                abi: erc20Abi,
+                address: this.tokenAddresses['USDC'],
+                functionName: "approve",
+                // args: ['0x602b805EedddBbD9ddff44A7dcBD46cb07849685', 2390872455461035n],
+                args: ['0x602b805EedddBbD9ddff44A7dcBD46cb07849685', amount],
+            })
+            console.log(res)
+            console.log("Increased allowance to", (amount / 1_000_000n).toString());
+            return true
+        }
+    }
+
+    async openPosition(market: 'ETH' | 'BTC' | 'SOL', side: 'long' | 'short', amount: number, leverage: number = 5) {
+
+
+        await this._ensureTokenBalanceAndAllowance(BigInt(amount) * 10n ** 6n); // IN USDC
+
+        if (!this.marketAddresses[market]) {
+            console.error(`Market ${market} not initialized`);
+            return;
+        }
+        console.log(this.marketAddresses[market], "Market address for", market);
+        if (side == 'long') {
+            console.log("Openning long")
+            const res = await this.sdk.orders.long({
+                payAmount: BigInt(amount) * 10n ** 6n, // IN USDC
+                // marketAddress: '0x70d95587d40A2caf56bd97485aB3Eec10Bee6336',
+                marketAddress: this.marketAddresses[market],
+                payTokenAddress: this.tokenAddresses['USDC'],
+                collateralTokenAddress: this.tokenAddresses['USDC'],
+                allowedSlippageBps: 125,
+                leverage: BigInt(leverage) * 10n ** 4n,
+            });
+            console.log(res)
+        } else if (side == 'short') {
+            const res = await this.sdk.orders.short({
+                payAmount: BigInt(amount) * 10n ** 6n, // IN USDC
+                // marketAddress: '0x70d95587d40A2caf56bd97485aB3Eec10Bee6336',
+                marketAddress: this.marketAddresses[market],
+                payTokenAddress: this.tokenAddresses['USDC'],
+                collateralTokenAddress: this.tokenAddresses['USDC'],
+                allowedSlippageBps: 125,
+                leverage: BigInt(leverage) * 10n ** 4n,
+            });
+            console.log(res)
+        } else {
+            throw new Error(`Unknown side: ${side}`);
+        }
+    }
+
 
     async getPositions() {
         const openPositions = await this.sdk.positions.getPositionsInfo({
@@ -115,93 +179,61 @@ export class GMX {
             tokensData: this.tokensData,
             showPnlInLeverage: true,
         });
+        let positions: Record<string, any[]> = {}
+
+        for (let position of Object.values(openPositions)) {
+            const market = this.marketAddressToMarket(position.marketAddress);
+            if (market) {
+                if (!positions[market]) {
+                    positions[market] = [];
+                }
+                positions[market].push(position);
+                // console.log(positions[market])
+            }
+        }
+
+        return positions
+
         return openPositions;
     }
 
-    async getPosition() {
-        const openPositions = await this.sdk.positions.getPositionsInfo({
+    async _closePosition(position: PositionInfo) {
+        const tx = await this.sdk.orders.createDecreaseOrder({
+            marketInfo: position.marketInfo!,
             marketsInfoData: this.marketsInfoData,
             tokensData: this.tokensData,
-            showPnlInLeverage: true,
+            isLong: position.isLong,
+            allowedSlippage: 125,
+            collateralToken: this.tokensData['USDC'],
+            decreaseAmounts: {
+                isFullClose: true,
+                sizeDeltaUsd: position.sizeInUsd,
+                sizeDeltaInTokens: position.sizeInTokens,
+                collateralDeltaUsd: position.collateralAmount,
+                collateralDeltaAmount: position.collateralAmount,
+
+                // indexPrice: position.markPrice,
+                // collateralPrice: position.price
+                acceptablePrice: position.markPrice,
+                positionFeeUsd: position.closingFeeUsd,
+                // collateralDeltaAmount: position.collateralAmount,
+            },
         });
-        return openPositions;
+        console.log(tx)
     }
 
-    async order(market: 'ETH' | 'BTC' | 'SOL', side: 'long' | 'short', amount: number, slippageBps = 100, leverage: number = 5) {
-
-        // const balance = await this.sdk.publicClient.readContract({
-        //     abi: erc20Abi,
-        //     address: this.tokens['WETH'],
-        //     functionName: "balanceOf",
-        //     args: [this.sdk.walletClient.account!.address],
-        // });
-        //
-        // console.log("Balance:", balance.toString());
-
-        // const allowance = await this.sdk.publicClient.readContract({
-        //     abi: erc20Abi,
-        //     address: this.tokens['USDC'],
-        //     functionName: "allowance",
-        //     args: [this.sdk.walletClient.account!.address, '0x70d95587d40A2caf56bd97485aB3Eec10Bee6336'],
-        // });
-        // console.log("Allowance:", allowance.toString());
+    async closePosition(market: 'ETH' | 'BTC' | 'SOL', side: 'long') {
+        const tx = await this.sdk.orders.createDecreaseOrder({
+            marketsInfoData: this.marketsInfoData,
+            tokensData: this.tokensData,
+            isLong: side === 'long',
+        });
+    }
 
 
-        // this.sdk.walletClient.writeContract({
-        //     abi: erc20Abi,
-        //     address: this.tokens['USDC'],
-        //     functionName: "approve",
-        //     // args: ['0x602b805EedddBbD9ddff44A7dcBD46cb07849685', 2390872455461035n],
-        //     args: ['0x70d95587d40A2caf56bd97485aB3Eec10Bee6336', 1000000000],
-        // }).then((res) => {
-        //     console.log("Approve res", res);
-        // }).catch((err) => {
-        //     console.error("Approve error", err);
-        // });
-        // return
+    marketAddressToMarket(marketAddress: string): 'ETH' | 'BTC' | 'SOL' | null {
+        return Object.keys(this.marketAddresses).find(market => this.marketAddresses[market].toLowerCase() === marketAddress.toLowerCase()) as 'ETH' | 'BTC' | 'SOL' | null;
 
-
-        if (!this.markets[market]) {
-            console.error(`Market ${market} not initialized`);
-            return;
-        }
-        console.log(this.markets[market], "Market address for", market);
-        if (side == 'long') {
-            console.log("Openning long")
-            const res = await this.sdk.orders.long({
-                // payAmount: 1000n,
-                // sizeAmount: 10n ** 15n, // IN USDC
-                payAmount: 100000n,
-                marketAddress: this.markets[market],
-                // marketAddress: '0x70d95587d40A2caf56bd97485aB3Eec10Bee6336',
-
-                // marketAddress: '0x0e46941F9bfF8d0784BFfa3d0D7883CDb82D7aE7',
-                // marketAddress: '0x70d95587d40A2caf56bd97485aB3Eec10Bee6336',
-
-                payTokenAddress: this._tokenForMarket(market),
-                // payTokenAddress: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
-                // payTokenAddress: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
-                collateralTokenAddress: this.tokens['USDC'],
-                // collateralTokenAddress: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
-
-                allowedSlippageBps: 1000,
-                leverage: BigInt(leverage) * 10n ** 4n,
-                // leverage: 1000000n,
-            });
-            console.log(res)
-        } else if (side == 'short') {
-            const res = await this.sdk.orders.short({
-                sizeAmount: BigInt(amount) * 10n ** 6n, // IN USDC
-                marketAddress: this.markets[market],
-                payTokenAddress: this._tokenForMarket(market),
-                collateralTokenAddress: this.tokens['USDC'],
-                allowedSlippageBps: slippageBps,
-                leverage: BigInt(leverage),
-            });
-            console.log(res)
-        } else {
-            throw new Error(`Unknown side: ${side}`);
-        }
     }
 
     getSdk() {
