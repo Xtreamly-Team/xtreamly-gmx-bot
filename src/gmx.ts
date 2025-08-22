@@ -187,6 +187,7 @@ export class GMX {
                 if (!positions[market]) {
                     positions[market] = [];
                 }
+                // position.clo
                 positions[market].push(position);
                 // console.log(positions[market])
             }
@@ -198,28 +199,29 @@ export class GMX {
     }
 
     async _closePosition(position: PositionInfo) {
-        const tx = await this.sdk.orders.createDecreaseOrder({
-            marketInfo: position.marketInfo!,
-            marketsInfoData: this.marketsInfoData,
-            tokensData: this.tokensData,
-            isLong: position.isLong,
-            allowedSlippage: 125,
-            collateralToken: this.tokensData['USDC'],
-            decreaseAmounts: {
-                isFullClose: true,
-                sizeDeltaUsd: position.sizeInUsd,
-                sizeDeltaInTokens: position.sizeInTokens,
-                collateralDeltaUsd: position.collateralAmount,
-                collateralDeltaAmount: position.collateralAmount,
 
-                // indexPrice: position.markPrice,
-                // collateralPrice: position.price
-                acceptablePrice: position.markPrice,
-                positionFeeUsd: position.closingFeeUsd,
-                // collateralDeltaAmount: position.collateralAmount,
-            },
-        });
-        console.log(tx)
+        // const tx = await this.sdk.orders.createDecreaseOrder({
+        //     marketInfo: position.marketInfo!,
+        //     marketsInfoData: this.marketsInfoData,
+        //     tokensData: this.tokensData,
+        //     isLong: position.isLong,
+        //     allowedSlippage: 125,
+        //     collateralToken: this.tokensData['USDC'],
+        //     decreaseAmounts: {
+        //         isFullClose: true,
+        //         sizeDeltaUsd: position.sizeInUsd,
+        //         sizeDeltaInTokens: position.sizeInTokens,
+        //         collateralDeltaUsd: position.collateralAmount,
+        //         collateralDeltaAmount: position.collateralAmount,
+        //
+        //         // indexPrice: position.markPrice,
+        //         // collateralPrice: position.price
+        //         acceptablePrice: position.markPrice,
+        //         positionFeeUsd: position.closingFeeUsd,
+        //         // collateralDeltaAmount: position.collateralAmount,
+        //     },
+        // });
+        // console.log(tx)
     }
 
     async closePosition(market: 'ETH' | 'BTC' | 'SOL', side: 'long') {

@@ -1,26 +1,29 @@
+import { MarketInfo } from "@gmx-io/sdk/build/types/src/types/markets";
+import { PositionInfo } from "@gmx-io/sdk/build/types/src/types/positions";
+import { TokenData } from "@gmx-io/sdk/build/types/src/types/tokens";
+// import { DecreasePositionAmounts } from "@gmx-io/sdk/build/types/src/types/trade";
 import { ethers } from "ethers";
 
-import { BASIS_POINTS_DIVISOR_BIGINT, DEFAULT_ACCEPTABLE_PRICE_IMPACT_BUFFER } from "config/factors";
-import { UserReferralInfo } from "domain/referrals";
-import { getPositionFee } from "domain/synthetics/fees";
-import { MarketInfo } from "domain/synthetics/markets";
-import { DecreasePositionSwapType, OrderType } from "domain/synthetics/orders";
-import {
-    PositionInfo,
-    PositionInfoLoaded,
-    getLeverage,
-    getLiquidationPrice,
-    getMinCollateralFactorForPosition,
-    getPositionPnlUsd,
-} from "domain/synthetics/positions";
-import { TokenData, convertToTokenAmount, convertToUsd } from "domain/synthetics/tokens";
-import { DUST_USD } from "lib/legacy";
-import { applyFactor, getBasisPoints, roundUpDivision } from "lib/numbers";
-import { DecreasePositionAmounts, NextPositionValues } from "sdk/types/trade";
-import { bigMath } from "sdk/utils/bigmath";
-import { getSwapStats } from "sdk/utils/swap/swapStats";
-import { getIsEquivalentTokens } from "sdk/utils/tokens";
+import { BASIS_POINTS_DIVISOR_BIGINT, DEFAULT_ACCEPTABLE_PRICE_IMPACT_BUFFER } from "./sdk/configs/factors.js";
 
+import { DecreasePositionSwapType, OrderType } from "./sdk/types/orders.js";
+// import {
+//     PositionInfo,
+//     PositionInfoLoaded,
+//     getLeverage,
+//     getLiquidationPrice,
+//     getMinCollateralFactorForPosition,
+//     getPositionPnlUsd,
+// } from "domain/synthetics/positions";
+// import { TokenData, convertToTokenAmount, convertToUsd } from "domain/synthetics/tokens";
+
+import { getPositionFee } from "./sdk/utils/fees//index.js";
+import { DecreasePositionAmounts, NextPositionValues } from "./sdk/types/trade";
+import { getSwapStats } from "./sdk/utils/swap/swapStats";
+import { bigMath } from "./sdk/utils/bigmath.js";
+import { applyFactor, getBasisPoints, roundUpDivision, expandDecimals, USD_DECIMALS } from "./sdk/utils/numbers.js";
+import { getIsEquivalentTokens } from "./sdk/utils/tokens.js";
+//
 import {
     getAcceptablePriceInfo,
     getDefaultAcceptablePriceImpactBps,
@@ -28,11 +31,13 @@ import {
     getOrderThresholdType,
 } from "./prices";
 
+const DUST_USD = expandDecimals(1, USD_DECIMALS);
+
 export function getDecreasePositionAmounts(p: {
     marketInfo: MarketInfo;
     collateralToken: TokenData;
     isLong: boolean;
-    position: PositionInfoLoaded | undefined;
+    position: PositionInfo;
     closeSizeUsd: bigint;
     keepLeverage: boolean;
     triggerPrice?: bigint;
@@ -58,7 +63,6 @@ export function getDecreasePositionAmounts(p: {
         triggerPrice,
         fixedAcceptablePriceImpactBps,
         acceptablePriceImpactBuffer,
-        userReferralInfo,
         minCollateralUsd,
         minPositionSizeUsd,
         uiFeeFactor,
@@ -374,7 +378,7 @@ export function getDecreasePositionAmounts(p: {
 }
 
 export function getIsFullClose(p: {
-    position: PositionInfoLoaded;
+    position: PositionInfo;
     sizeDeltaUsd: bigint;
     indexPrice: bigint;
     remainingCollateralUsd: bigint;
@@ -557,95 +561,95 @@ export function estimateCollateralCost(baseUsd: bigint, collateralToken: TokenDa
     };
 }
 
-export function getNextPositionValuesForDecreaseTrade(p: {
-    existingPosition?: PositionInfo;
-    marketInfo: MarketInfo;
-    collateralToken: TokenData;
-    sizeDeltaUsd: bigint;
-    sizeDeltaInTokens: bigint;
-    realizedPnl: bigint;
-    estimatedPnl: bigint;
-    collateralDeltaUsd: bigint;
-    collateralDeltaAmount: bigint;
-    payedRemainingCollateralUsd: bigint;
-    payedRemainingCollateralAmount: bigint;
-    showPnlInLeverage: boolean;
-    isLong: boolean;
-    minCollateralUsd: bigint;
-    userReferralInfo: UserReferralInfo | undefined;
-}): NextPositionValues {
-    const {
-        existingPosition,
-        marketInfo,
-        collateralToken,
-        sizeDeltaUsd,
-        sizeDeltaInTokens,
-        realizedPnl,
-        estimatedPnl,
-        collateralDeltaUsd,
-        collateralDeltaAmount,
-        payedRemainingCollateralUsd,
-        payedRemainingCollateralAmount,
-        showPnlInLeverage,
-        isLong,
-        minCollateralUsd,
-        userReferralInfo,
-    } = p;
-
-    const nextSizeUsd = existingPosition ? existingPosition.sizeInUsd - sizeDeltaUsd : 0n;
-    const nextSizeInTokens = existingPosition ? existingPosition.sizeInTokens - sizeDeltaInTokens : 0n;
-
-    let nextCollateralUsd = existingPosition
-        ? existingPosition.collateralUsd - collateralDeltaUsd - payedRemainingCollateralUsd
-        : 0n;
-
-    if (nextCollateralUsd < 0) {
-        nextCollateralUsd = 0n;
-    }
-
-    let nextCollateralAmount = existingPosition
-        ? existingPosition.collateralAmount - collateralDeltaAmount - payedRemainingCollateralAmount
-        : 0n;
-
-    if (nextCollateralAmount < 0) {
-        nextCollateralAmount = 0n;
-    }
-
-    const nextPnl = estimatedPnl ? estimatedPnl - realizedPnl : 0n;
-
-    const nextPnlPercentage = nextCollateralUsd !== 0n ? getBasisPoints(nextPnl, nextCollateralUsd) : 0n;
-
-    const nextLeverage = getLeverage({
-        sizeInUsd: nextSizeUsd,
-        collateralUsd: nextCollateralUsd,
-        pnl: showPnlInLeverage ? nextPnl : undefined,
-        pendingBorrowingFeesUsd: 0n, // deducted on order
-        pendingFundingFeesUsd: 0n, // deducted on order
-    });
-
-    const nextLiqPrice = getLiquidationPrice({
-        marketInfo,
-        collateralToken,
-        sizeInTokens: nextSizeInTokens,
-        sizeInUsd: nextSizeUsd,
-        collateralUsd: nextCollateralUsd,
-        collateralAmount: nextCollateralAmount,
-        minCollateralUsd,
-        userReferralInfo,
-        pendingBorrowingFeesUsd: 0n, // deducted on order
-        pendingFundingFeesUsd: 0n, // deducted on order
-        isLong: isLong,
-    });
-
-    return {
-        nextSizeUsd,
-        nextCollateralUsd,
-        nextLiqPrice,
-        nextPnl,
-        nextPnlPercentage,
-        nextLeverage,
-    };
-}
+// export function getNextPositionValuesForDecreaseTrade(p: {
+//     existingPosition?: PositionInfo;
+//     marketInfo: MarketInfo;
+//     collateralToken: TokenData;
+//     sizeDeltaUsd: bigint;
+//     sizeDeltaInTokens: bigint;
+//     realizedPnl: bigint;
+//     estimatedPnl: bigint;
+//     collateralDeltaUsd: bigint;
+//     collateralDeltaAmount: bigint;
+//     payedRemainingCollateralUsd: bigint;
+//     payedRemainingCollateralAmount: bigint;
+//     showPnlInLeverage: boolean;
+//     isLong: boolean;
+//     minCollateralUsd: bigint;
+//     userReferralInfo: UserReferralInfo | undefined;
+// }): NextPositionValues {
+//     const {
+//         existingPosition,
+//         marketInfo,
+//         collateralToken,
+//         sizeDeltaUsd,
+//         sizeDeltaInTokens,
+//         realizedPnl,
+//         estimatedPnl,
+//         collateralDeltaUsd,
+//         collateralDeltaAmount,
+//         payedRemainingCollateralUsd,
+//         payedRemainingCollateralAmount,
+//         showPnlInLeverage,
+//         isLong,
+//         minCollateralUsd,
+//         userReferralInfo,
+//     } = p;
+//
+//     const nextSizeUsd = existingPosition ? existingPosition.sizeInUsd - sizeDeltaUsd : 0n;
+//     const nextSizeInTokens = existingPosition ? existingPosition.sizeInTokens - sizeDeltaInTokens : 0n;
+//
+//     let nextCollateralUsd = existingPosition
+//         ? existingPosition.collateralUsd - collateralDeltaUsd - payedRemainingCollateralUsd
+//         : 0n;
+//
+//     if (nextCollateralUsd < 0) {
+//         nextCollateralUsd = 0n;
+//     }
+//
+//     let nextCollateralAmount = existingPosition
+//         ? existingPosition.collateralAmount - collateralDeltaAmount - payedRemainingCollateralAmount
+//         : 0n;
+//
+//     if (nextCollateralAmount < 0) {
+//         nextCollateralAmount = 0n;
+//     }
+//
+//     const nextPnl = estimatedPnl ? estimatedPnl - realizedPnl : 0n;
+//
+//     const nextPnlPercentage = nextCollateralUsd !== 0n ? getBasisPoints(nextPnl, nextCollateralUsd) : 0n;
+//
+//     const nextLeverage = getLeverage({
+//         sizeInUsd: nextSizeUsd,
+//         collateralUsd: nextCollateralUsd,
+//         pnl: showPnlInLeverage ? nextPnl : undefined,
+//         pendingBorrowingFeesUsd: 0n, // deducted on order
+//         pendingFundingFeesUsd: 0n, // deducted on order
+//     });
+//
+//     const nextLiqPrice = getLiquidationPrice({
+//         marketInfo,
+//         collateralToken,
+//         sizeInTokens: nextSizeInTokens,
+//         sizeInUsd: nextSizeUsd,
+//         collateralUsd: nextCollateralUsd,
+//         collateralAmount: nextCollateralAmount,
+//         minCollateralUsd,
+//         userReferralInfo,
+//         pendingBorrowingFeesUsd: 0n, // deducted on order
+//         pendingFundingFeesUsd: 0n, // deducted on order
+//         isLong: isLong,
+//     });
+//
+//     return {
+//         nextSizeUsd,
+//         nextCollateralUsd,
+//         nextLiqPrice,
+//         nextPnl,
+//         nextPnlPercentage,
+//         nextLeverage,
+//     };
+// }
 
 function getDecreaseSwapType(pnlToken: TokenData, collateralToken: TokenData, receiveToken: TokenData) {
     if (getIsEquivalentTokens(pnlToken, collateralToken)) {

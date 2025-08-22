@@ -27,12 +27,8 @@ async function main() {
     // await gmx.openPosition('SOL', 'short', 10, 5);
     const positions = await gmx.getPositions()
     const solPosition = positions['SOL'][0];
-    // console.l
-    // og(solPosition)
+    // console.log(solPosition)
     await gmx._closePosition(solPosition)
-
-
-
 
 }
 
