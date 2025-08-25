@@ -15,6 +15,7 @@ import { BigNumber } from 'ethers';
 import type { WalletClient, PublicClient } from 'viem';
 
 import { erc20Abi } from "viem";
+import { getDecreasePositionAmounts } from './decrease';
 
 
 export class GMX {
@@ -194,8 +195,6 @@ export class GMX {
         }
 
         return positions
-
-        return openPositions;
     }
 
     async _closePosition(position: PositionInfo) {
@@ -224,11 +223,38 @@ export class GMX {
         // console.log(tx)
     }
 
-    async closePosition(market: 'ETH' | 'BTC' | 'SOL', side: 'long') {
+    async closePosition(market: 'ETH' | 'BTC' | 'SOL') {
+        const position: PositionInfo = (await this.getPositions())[market][0]
+        console.log("POSITION TO CLOSE")
+        console.log(position)
         const tx = await this.sdk.orders.createDecreaseOrder({
+            marketInfo: this.marketInfos[this.marketAddresses[market]],
             marketsInfoData: this.marketsInfoData,
             tokensData: this.tokensData,
-            isLong: side === 'long',
+            isLong: position.isLong,
+            allowedSlippage: 10000,
+            decreaseAmounts: getDecreasePositionAmounts({
+                marketInfo: this.marketInfos[this.marketAddresses[market]],
+                collateralToken: this.tokensData[this.tokenAddresses[market]],
+                isLong: position.isLong,
+                position: position,
+                closeSizeUsd: position.sizeInUsd,
+                keepLeverage: true,
+                // triggerPrice undefined,
+                // fixedAcceptablePriceImpactBps: undefined,
+                userReferralInfo: undefined,
+                minCollateralUsd: 0n,
+                minPositionSizeUsd: 0n,
+                uiFeeFactor: 0n,
+                isLimit: false,
+                // limitPrice: undefined,
+                // triggerOrderType: undefined,
+                // receiveToken: undefined,
+
+            }),
+            collateralToken: this.tokensData[this.tokenAddresses[market]],
+            referralCode: undefined,
+            isTrigger: false,
         });
     }
 

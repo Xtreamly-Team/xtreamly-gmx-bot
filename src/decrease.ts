@@ -9,6 +9,8 @@ import { DecreasePositionSwapType, OrderType } from "./sdk/types/orders.js";
 
 import { convertToTokenAmount, convertToUsd } from "./domain/synthetics/tokens/utils.js";
 
+const MaxUint256: bigint = BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+
 import { getPositionFee } from "./sdk/utils/fees//index.js";
 import { DecreasePositionAmounts } from "./sdk/types/trade.js";
 import { getSwapStats } from "./sdk/utils/swap/swapStats";
@@ -507,7 +509,7 @@ function applyAcceptablePrice(p: {
             if (isLong) {
                 values.acceptablePrice = 0n;
             } else {
-                values.acceptablePrice = ethers.MaxUint256;
+                values.acceptablePrice = MaxUint256;
             }
         } else {
             let maxNegativePriceImpactBps = fixedAcceptablePriceImpactBps;

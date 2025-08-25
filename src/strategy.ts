@@ -4,7 +4,7 @@ import { Xtreamly } from "./xtreamly";
 
 export class PerpStrategy {
     private walletPrivkey: string;
-    private token: string;
+    private token: 'ETH' | 'SOL' | 'BTC';
     private baseAsset: string;
     private basePositionSize: number;
     private leverage: number;
@@ -17,7 +17,7 @@ export class PerpStrategy {
 
     constructor(params: {
         walletPrivkey: string;
-        token: string;
+        token: 'ETH' | 'SOL' | 'BTC';
         basePositionSize: number;
         leverage: number;
         keepStrategyHorizonMin?: number;
@@ -85,12 +85,12 @@ export class PerpStrategy {
                 } else {
                     console.log("Flipping short position to long")
                     const orderSize = position.sizeInUsd + BigInt(this.basePositionSize);
-                    const res = await this.gmx.openPosition(this.token, 'long', orderSize, 100, this.leverage);
+                    const res = await this.gmx.openPosition(this.token, 'long', orderSize, this.leverage);
                 }
             }
             else {
                 console.log("Creating a new long position")
-                const res = await this.gmx.openPosition(this.token, 'long', this.basePositionSize, 100, this.leverage);
+                const res = await this.gmx.openPosition(this.token, 'long', this.basePositionSize, this.leverage);
                 console.log(res)
             }
         } else if (signal.short) {
@@ -107,12 +107,12 @@ export class PerpStrategy {
                 } else {
                     console.log("Flipping long position to short")
                     const orderSize = position.sizeInUsd + BigInt(this.basePositionSize);
-                    const res = await this.gmx.openPosition(this.token, 'short', orderSize, 100, this.leverage);
+                    const res = await this.gmx.openPosition(this.token, 'short', orderSize, this.leverage);
                     console.log(res)
                 }
             } else {
                 console.log("Creating a new short position")
-                const res = await this.gmx.openPosition(this.token, 'short', this.basePositionSize, 100, this.leverage);
+                const res = await this.gmx.openPosition(this.token, 'short', this.basePositionSize, this.leverage);
             }
         } else {
             console.log("No signal received for", this.token, "at", currentTime);
@@ -127,7 +127,7 @@ export class PerpStrategy {
                         console.log("Haven't received long signal for a while, closing long position")
                         console.log("Closing long position due to no recent long signal")
                         console.log(position)
-                        await this.gmx.openPosition(this.token, 'short', position.sizeInUsd, 100, this.leverage);
+                        await this.gmx.openPosition(this.token, 'short', position.sizeInUsd, this.leverage);
                     } else {
                         console.log("Keeping long position open")
                     }
@@ -137,7 +137,7 @@ export class PerpStrategy {
                         console.log("Haven't received short signal for a while, closing short position")
                         console.log("Closing short position due to no recent short signal")
                         console.log(position)
-                        await this.gmx.openPosition(this.token, 'long', position.sizeInUsd, 100, this.leverage);
+                        await this.gmx.openPosition(this.token, 'long', position.sizeInUsd, this.leverage);
                     } else {
                         console.log("Keeping short position open")
                     }

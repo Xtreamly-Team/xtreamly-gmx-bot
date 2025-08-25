@@ -6,7 +6,7 @@ let strategy: PerpStrategy
 export async function perpReset(
     wallet_address: string,
     wallet_privkey: string,
-    token: string,
+    token: 'BTC' | 'ETH' | 'SOL',
     base_position_size: number,
     leverage: number,
     keep_strategy_horizon_min: number,

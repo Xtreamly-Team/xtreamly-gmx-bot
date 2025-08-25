@@ -1,5 +1,4 @@
 import { GMX } from './gmx.js';
-import { PerpLowVolStrategy } from './strategy.js';
 import { Xtreamly } from './xtreamly.js';
 require('dotenv').config();
 
@@ -25,10 +24,10 @@ async function main() {
     const gmx = new GMX(privateKey);
     await gmx.initialzeMarkets();
     // await gmx.openPosition('SOL', 'short', 10, 5);
-    const positions = await gmx.getPositions()
-    const solPosition = positions['SOL'][0];
+    // const positions = await gmx.getPositions()
+    // const solPosition = positions['SOL'][0];
     // console.log(solPosition)
-    await gmx._closePosition(solPosition)
+    await gmx.closePosition('SOL')
 
 }
 

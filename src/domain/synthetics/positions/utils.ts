@@ -3,7 +3,8 @@ import { ethers } from "ethers";
 
 import { BASIS_POINTS_DIVISOR_BIGINT } from "../../../sdk/configs/factors.js";
 
-import { UserReferralInfo } from "domain/referrals";
+// import { UserReferralInfo } from "domain/referrals";
+
 
 import {
     MarketInfo,
@@ -16,7 +17,7 @@ import {
     getPoolUsdWithoutPnl,
 } from "../../../sdk/utils/markets.js";
 
-import { Token } from "../../../sdk/types/tokens.js";
+import { Token, TokenData } from "../../../sdk/types/tokens.js";
 
 import { PositionInfo } from "../../../sdk/types/positions.js";
 
@@ -36,6 +37,8 @@ import { bigMath } from "../../../sdk/utils/bigmath.js";
 
 import { getIsEquivalentTokens } from "../../../sdk/utils/tokens.js";
 import { convertToUsd } from "../../../sdk/tokens.js";
+import { UserReferralInfo } from "../../../sdk/types/referrals.js";
+import { getPositionFee, getPriceImpactForPosition } from "../../../sdk/utils/fees/index.js";
 
 // import { getBorrowingFeeRateUsd, getFundingFeeRateUsd, getPositionFee, getPriceImpactForPosition } from "../fees";
 //
@@ -239,15 +242,15 @@ export function formatLiquidationPrice(
     });
 }
 
-export function formatAcceptablePrice(acceptablePrice?: bigint, opts: { visualMultiplier?: number } = {}) {
-    if (acceptablePrice !== undefined && (acceptablePrice == 0n || acceptablePrice >= ethers.MaxInt256)) {
-        return "NA";
-    }
-
-    return formatUsdPrice(acceptablePrice, {
-        ...opts,
-    });
-}
+// export function formatAcceptablePrice(acceptablePrice?: bigint, opts: { visualMultiplier?: number } = {}) {
+//     if (acceptablePrice !== undefined && (acceptablePrice == 0n || acceptablePrice >= ethers.MaxInt256)) {
+//         return "NA";
+//     }
+//
+//     return formatUsdPrice(acceptablePrice, {
+//         ...opts,
+//     });
+// }
 
 export function getLeverage(p: {
     sizeInUsd: bigint;
@@ -333,79 +336,79 @@ export function formatEstimatedLiquidationTime(hours?: number | undefined) {
     return `${days} days`;
 }
 
-export function getNameByOrderType(
-    orderType: OrderType | undefined,
-    isTwap: boolean,
-    opts: { abbr?: boolean; lower?: boolean } = {}
-) {
-    const { abbr, lower } = opts;
-
-    if (isTwap) {
-        return t`TWAP`;
-    }
-
-    if (orderType === OrderType.LimitDecrease) {
-        if (abbr) {
-            return t`TP`;
-        }
-
-        if (lower) {
-            return t`take profit`;
-        }
-
-        return t`Take Profit`;
-    }
-
-    if (orderType === OrderType.StopLossDecrease) {
-        if (abbr) {
-            return t`SL`;
-        }
-
-        if (lower) {
-            return t`stop loss`;
-        }
-
-        return t`Stop Loss`;
-    }
-
-    if (orderType === OrderType.StopIncrease) {
-        if (lower) {
-            return t`stop market`;
-        }
-
-        return t`Stop Market`;
-    }
-
-    if (orderType === OrderType.LimitIncrease || orderType === OrderType.LimitSwap) {
-        if (lower) {
-            return t`limit`;
-        }
-
-        return t`Limit`;
-    }
-
-    if (
-        orderType === OrderType.MarketSwap ||
-        orderType === OrderType.MarketIncrease ||
-        orderType === OrderType.MarketDecrease
-    ) {
-        if (lower) {
-            return t`market`;
-        }
-
-        return t`Market`;
-    }
-
-    if (abbr) {
-        return t`T`;
-    }
-
-    if (lower) {
-        return t`trigger`;
-    }
-
-    return t`Trigger`;
-}
+// export function getNameByOrderType(
+//     orderType: OrderType | undefined,
+//     isTwap: boolean,
+//     opts: { abbr?: boolean; lower?: boolean } = {}
+// ) {
+//     const { abbr, lower } = opts;
+//
+//     if (isTwap) {
+//         return t`TWAP`;
+//     }
+//
+//     if (orderType === OrderType.LimitDecrease) {
+//         if (abbr) {
+//             return t`TP`;
+//         }
+//
+//         if (lower) {
+//             return t`take profit`;
+//         }
+//
+//         return t`Take Profit`;
+//     }
+//
+//     if (orderType === OrderType.StopLossDecrease) {
+//         if (abbr) {
+//             return t`SL`;
+//         }
+//
+//         if (lower) {
+//             return t`stop loss`;
+//         }
+//
+//         return t`Stop Loss`;
+//     }
+//
+//     if (orderType === OrderType.StopIncrease) {
+//         if (lower) {
+//             return t`stop market`;
+//         }
+//
+//         return t`Stop Market`;
+//     }
+//
+//     if (orderType === OrderType.LimitIncrease || orderType === OrderType.LimitSwap) {
+//         if (lower) {
+//             return t`limit`;
+//         }
+//
+//         return t`Limit`;
+//     }
+//
+//     if (
+//         orderType === OrderType.MarketSwap ||
+//         orderType === OrderType.MarketIncrease ||
+//         orderType === OrderType.MarketDecrease
+//     ) {
+//         if (lower) {
+//             return t`market`;
+//         }
+//
+//         return t`Market`;
+//     }
+//
+//     if (abbr) {
+//         return t`T`;
+//     }
+//
+//     if (lower) {
+//         return t`trigger`;
+//     }
+//
+//     return t`Trigger`;
+// }
 
 function willPositionCollateralBeSufficient(
     collateralTokenMinPrice: bigint,
