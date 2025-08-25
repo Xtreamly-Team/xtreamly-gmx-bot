@@ -225,13 +225,6 @@ export class GMX {
 
     async closePosition(market: 'ETH' | 'BTC' | 'SOL') {
         const position: PositionInfo = (await this.getPositions())[market][0]
-        // console.log("POSITION TO CLOSE")
-        // console.log(position)
-
-        // console.log("MARKET INFO")
-        // console.log(this.marketInfos)
-
-        // console.warn(this.marketsInfoData[this.marketAddresses[market]])
 
         const tx = await this.sdk.orders.createDecreaseOrder({
             marketInfo: this.marketsInfoData[this.marketAddresses[market]],

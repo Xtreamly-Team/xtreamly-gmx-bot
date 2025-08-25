@@ -83,9 +83,7 @@ export function getCappedPositionImpactUsd(
     isLong: boolean,
     opts: { fallbackToZero?: boolean } = {}
 ) {
-    console.log("GET CAPPED POSITION IMPACT USD")
     const priceImpactDeltaUsd = getPriceImpactForPosition(marketInfo, sizeDeltaUsd, isLong, opts);
-    console.log(priceImpactDeltaUsd)
 
     if (priceImpactDeltaUsd < 0) {
         return priceImpactDeltaUsd;
@@ -94,8 +92,6 @@ export function getCappedPositionImpactUsd(
     const { indexToken } = marketInfo;
 
     const impactPoolAmount = marketInfo?.positionImpactPoolAmount;
-
-    console.warn(impactPoolAmount)
 
     const maxPriceImpactUsdBasedOnImpactPool = convertToUsd(
         impactPoolAmount,
@@ -108,8 +104,6 @@ export function getCappedPositionImpactUsd(
     if (cappedImpactUsd > maxPriceImpactUsdBasedOnImpactPool) {
         cappedImpactUsd = maxPriceImpactUsdBasedOnImpactPool;
     }
-
-    console.error("Before Apply Factor")
 
     const maxPriceImpactFactor = marketInfo.maxPositionImpactFactorPositive;
     const maxPriceImpactUsdBasedOnMaxPriceImpactFactor = applyFactor(bigMath.abs(sizeDeltaUsd), maxPriceImpactFactor);

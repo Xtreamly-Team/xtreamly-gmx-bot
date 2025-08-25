@@ -114,21 +114,10 @@ export function getDecreasePositionAmounts(p: {
 
     const pnlToken = isLong ? marketInfo.longToken : marketInfo.shortToken;
 
-    // console.warn("PNL TOKEN")
-    // console.warn(pnlToken)
-    //
-    // console.log("COLLATERAL TOKEN")
-    // console.log(collateralToken)
-    //
-    // console.warn("RECEIVE TOKEN")
-    // console.warn(receiveToken)
-
     values.decreaseSwapType = getDecreaseSwapType(pnlToken, collateralToken, receiveToken);
 
     const markPrice = getMarkPrice({ prices: indexToken.prices, isIncrease: false, isLong });
     const isTrigger = orderType !== undefined;
-
-    console.warn(markPrice)
 
     if (orderType) {
         values.triggerPrice = triggerPrice;

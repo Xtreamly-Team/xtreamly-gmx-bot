@@ -53,8 +53,6 @@ export function getAcceptablePriceInfo(p: {
     sizeDeltaUsd: bigint;
     maxNegativePriceImpactBps?: bigint;
 }) {
-    console.log("GET ACCEPTABLE PRICE INFO")
-    console.log(p)
 
     const { marketInfo, isIncrease, isLong, indexPrice, sizeDeltaUsd, maxNegativePriceImpactBps } = p;
     const { indexToken } = marketInfo;
@@ -95,11 +93,6 @@ export function getAcceptablePriceInfo(p: {
         return values;
     }
 
-    console.error("VALUES")
-    console.warn(values)
-
-    console.error(getCappedPositionImpactUsd)
-
     values.priceImpactDeltaUsd = getCappedPositionImpactUsd(
         marketInfo,
         isIncrease ? sizeDeltaUsd : sizeDeltaUsd * -1n,
@@ -108,9 +101,6 @@ export function getAcceptablePriceInfo(p: {
             fallbackToZero: !isIncrease,
         }
     );
-
-    console.error("PRICE IMPACT")
-    console.warn(values)
 
 
     if (!isIncrease && values.priceImpactDeltaUsd < 0) {
