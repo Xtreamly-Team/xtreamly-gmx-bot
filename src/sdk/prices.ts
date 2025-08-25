@@ -1,16 +1,16 @@
-import { BASIS_POINTS_DIVISOR_BIGINT, DEFAULT_ACCEPTABLE_PRICE_IMPACT_BUFFER } from "configs/factors";
-import { MarketInfo } from "types/markets";
-import { OrderType } from "types/orders";
-import { TokenPrices } from "types/tokens";
-import { TriggerThresholdType } from "types/trade";
+import { BASIS_POINTS_DIVISOR_BIGINT, DEFAULT_ACCEPTABLE_PRICE_IMPACT_BUFFER } from "./configs/factors";
+import { MarketInfo } from "./types/markets";
+import { OrderType } from "./types/orders";
+import { TokenPrices } from "./types/tokens";
+import { TriggerThresholdType } from "./types/trade.js";
 
-import { bigMath } from "./bigmath";
-import { getPriceImpactByAcceptablePrice } from "./fees";
-import { getCappedPositionImpactUsd } from "./fees";
-import { expandDecimals, getBasisPoints } from "./numbers";
-import { roundUpMagnitudeDivision } from "./numbers";
-import { applyFactor } from "./numbers";
-import { convertToTokenAmount } from "../tokens";
+import { bigMath } from "./utils/bigmath.js";
+import { getPriceImpactByAcceptablePrice } from "./utils/fees";
+import { getCappedPositionImpactUsd } from "./utils/fees";
+import { expandDecimals, getBasisPoints } from "./utils/numbers.js";
+import { roundUpMagnitudeDivision } from "./utils/numbers.js";
+import { applyFactor } from "./utils/numbers.js";
+import { convertToTokenAmount } from "./tokens.js";
 
 export function getMarkPrice(p: { prices: TokenPrices; isIncrease: boolean; isLong: boolean }) {
     const { prices, isIncrease, isLong } = p;

@@ -7,6 +7,7 @@ import { ethers } from "ethers";
 import { BASIS_POINTS_DIVISOR_BIGINT, DEFAULT_ACCEPTABLE_PRICE_IMPACT_BUFFER } from "./sdk/configs/factors.js";
 
 import { DecreasePositionSwapType, OrderType } from "./sdk/types/orders.js";
+
 // import {
 //     PositionInfo,
 //     PositionInfoLoaded,
@@ -15,10 +16,12 @@ import { DecreasePositionSwapType, OrderType } from "./sdk/types/orders.js";
 //     getMinCollateralFactorForPosition,
 //     getPositionPnlUsd,
 // } from "domain/synthetics/positions";
-// import { TokenData, convertToTokenAmount, convertToUsd } from "domain/synthetics/tokens";
+//
+//
+import { convertToTokenAmount, convertToUsd } from "./domain/synthetics/tokens/utils.js";
 
 import { getPositionFee } from "./sdk/utils/fees//index.js";
-import { DecreasePositionAmounts, NextPositionValues } from "./sdk/types/trade";
+import { DecreasePositionAmounts, NextPositionValues } from "./sdk/types/trade.js";
 import { getSwapStats } from "./sdk/utils/swap/swapStats";
 import { bigMath } from "./sdk/utils/bigmath.js";
 import { applyFactor, getBasisPoints, roundUpDivision, expandDecimals, USD_DECIMALS } from "./sdk/utils/numbers.js";
@@ -29,7 +32,7 @@ import {
     getDefaultAcceptablePriceImpactBps,
     getMarkPrice,
     getOrderThresholdType,
-} from "./prices";
+} from "./sdk/prices.js";
 
 const DUST_USD = expandDecimals(1, USD_DECIMALS);
 
