@@ -31,7 +31,7 @@ export class GMX {
         'SOL': '0x09400D9DB990D5ed3f35D7be61DfAEB900Af03C9',
         'BTC': '0x7C11F78Ce78768518D743E81Fdfa2F860C6b9A77',
     };
-    private marketInfos: Record<string, MarketInfo> = {};
+    // private marketInfos: Record<string, MarketInfo> = {};
     private tokensData!: TokensData;
     private marketsInfoData!: MarketsInfoData;
 
@@ -225,17 +225,23 @@ export class GMX {
 
     async closePosition(market: 'ETH' | 'BTC' | 'SOL') {
         const position: PositionInfo = (await this.getPositions())[market][0]
-        console.log("POSITION TO CLOSE")
-        console.log(position)
+        // console.log("POSITION TO CLOSE")
+        // console.log(position)
+
+        // console.log("MARKET INFO")
+        // console.log(this.marketInfos)
+
+        // console.warn(this.marketsInfoData[this.marketAddresses[market]])
+
         const tx = await this.sdk.orders.createDecreaseOrder({
-            marketInfo: this.marketInfos[this.marketAddresses[market]],
+            marketInfo: this.marketsInfoData[this.marketAddresses[market]],
             marketsInfoData: this.marketsInfoData,
             tokensData: this.tokensData,
             isLong: position.isLong,
             allowedSlippage: 10000,
             decreaseAmounts: getDecreasePositionAmounts({
-                marketInfo: this.marketInfos[this.marketAddresses[market]],
-                collateralToken: this.tokensData[this.tokenAddresses[market]],
+                marketInfo: this.marketsInfoData[this.marketAddresses[market]],
+                collateralToken: this.tokensData[this.tokenAddresses['USDC']],
                 isLong: position.isLong,
                 position: position,
                 closeSizeUsd: position.sizeInUsd,
@@ -249,10 +255,10 @@ export class GMX {
                 isLimit: false,
                 // limitPrice: undefined,
                 // triggerOrderType: undefined,
-                // receiveToken: undefined,
+                receiveToken: this.tokensData[this.tokenAddresses['USDC']],
 
             }),
-            collateralToken: this.tokensData[this.tokenAddresses[market]],
+            collateralToken: this.tokensData[this.tokenAddresses['USDC']],
             referralCode: undefined,
             isTrigger: false,
         });

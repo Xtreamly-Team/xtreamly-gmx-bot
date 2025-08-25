@@ -5,11 +5,8 @@ import { TokenPrices } from "./types/tokens";
 import { TriggerThresholdType } from "./types/trade.js";
 
 import { bigMath } from "./utils/bigmath.js";
-import { getPriceImpactByAcceptablePrice } from "./utils/fees";
-import { getCappedPositionImpactUsd } from "./utils/fees";
-import { expandDecimals, getBasisPoints } from "./utils/numbers.js";
-import { roundUpMagnitudeDivision } from "./utils/numbers.js";
-import { applyFactor } from "./utils/numbers.js";
+import { getPriceImpactByAcceptablePrice, getCappedPositionImpactUsd } from "./utils/fees/priceImpact.js";
+import { expandDecimals, getBasisPoints, roundUpMagnitudeDivision, applyFactor } from "./utils/numbers.js";
 import { convertToTokenAmount } from "./tokens.js";
 
 export function getMarkPrice(p: { prices: TokenPrices; isIncrease: boolean; isLong: boolean }) {
@@ -56,6 +53,9 @@ export function getAcceptablePriceInfo(p: {
     sizeDeltaUsd: bigint;
     maxNegativePriceImpactBps?: bigint;
 }) {
+    console.log("GET ACCEPTABLE PRICE INFO")
+    console.log(p)
+
     const { marketInfo, isIncrease, isLong, indexPrice, sizeDeltaUsd, maxNegativePriceImpactBps } = p;
     const { indexToken } = marketInfo;
 
@@ -95,6 +95,11 @@ export function getAcceptablePriceInfo(p: {
         return values;
     }
 
+    console.error("VALUES")
+    console.warn(values)
+
+    console.error(getCappedPositionImpactUsd)
+
     values.priceImpactDeltaUsd = getCappedPositionImpactUsd(
         marketInfo,
         isIncrease ? sizeDeltaUsd : sizeDeltaUsd * -1n,
@@ -103,6 +108,10 @@ export function getAcceptablePriceInfo(p: {
             fallbackToZero: !isIncrease,
         }
     );
+
+    console.error("PRICE IMPACT")
+    console.warn(values)
+
 
     if (!isIncrease && values.priceImpactDeltaUsd < 0) {
         const minPriceImpactUsd = applyFactor(sizeDeltaUsd, marketInfo.maxPositionImpactFactorNegative) * -1n;
