@@ -1,27 +1,17 @@
-// import { t } from "@lingui/macro";
 import { ethers } from "ethers";
 
 import { BASIS_POINTS_DIVISOR_BIGINT } from "../../../sdk/configs/factors.js";
 
-import { UserReferralInfo } from "domain/referrals";
-
 import {
     MarketInfo,
-} from "../../../sdk/types/markets.js"
-
-import {
     getCappedPoolPnl,
     getMarketPnl,
     getOpenInterestUsd,
     getPoolUsdWithoutPnl,
-} from "../../../sdk/utils/markets.js";
+} from "domain/synthetics/markets";
 
-import { Token } from "../../../sdk/types/tokens.js";
-
-import { PositionInfo } from "../../../sdk/types/positions.js";
-
-export type PositionInfoLoaded = PositionInfo & { marketInfo: MarketInfo };
-
+import { Token } from "domain/tokens";
+import { CHART_PERIODS } from "lib/legacy";
 import {
     applyFactor,
     expandDecimals,
@@ -30,23 +20,16 @@ import {
     calculateDisplayDecimals,
     PRECISION,
     formatUsdPrice,
-} from "../../../sdk/utils/numbers.js";
+} from "lib/numbers";
+import { bigMath } from "sdk/utils/bigmath";
+import { getIsEquivalentTokens } from "sdk/utils/tokens";
 
-import { bigMath } from "../../../sdk/utils/bigmath.js";
+import { getBorrowingFeeRateUsd, getFundingFeeRateUsd, getPositionFee, getPriceImpactForPosition } from "../fees";
+import { OrderType } from "../orders/types";
+import { TokenData, convertToUsd } from "../tokens";
+import { PositionInfo, PositionInfoLoaded } from "./types";
 
-import { getIsEquivalentTokens } from "../../../sdk/utils/tokens.js";
-import { convertToUsd } from "../../../sdk/tokens.js";
-
-// import { getBorrowingFeeRateUsd, getFundingFeeRateUsd, getPositionFee, getPriceImpactForPosition } from "../fees";
-//
-// import { OrderType } from "../orders/types";
-//
-// // import { TokenData, convertToUsd } from "../tokens";
-// import { TokenData, convertToUsd } from "../tokens";
-//
-// import { PositionInfo, PositionInfoLoaded } from "./types";
-//
-// export * from "sdk/utils/positions";
+export * from "sdk/utils/positions";
 
 export function getPositionValueUsd(p: { indexToken: Token; sizeInTokens: bigint; markPrice: bigint }) {
     const { indexToken, sizeInTokens, markPrice } = p;
@@ -275,44 +258,44 @@ export function formatLeverage(leverage?: bigint) {
     return `${formatAmount(leverage, 4, 2)}x`;
 }
 
-// export function getEstimatedLiquidationTimeInHours(
-//     position: PositionInfo,
-//     minCollateralUsd: bigint | undefined
-// ): number | undefined {
-//     const { marketInfo, isLong, sizeInUsd, isOpening, netValue } = position;
-//
-//     if (isOpening || minCollateralUsd === undefined || !marketInfo) return;
-//
-//     let liquidationCollateralUsd = applyFactor(sizeInUsd, marketInfo.minCollateralFactor);
-//     if (liquidationCollateralUsd < minCollateralUsd) {
-//         liquidationCollateralUsd = minCollateralUsd;
-//     }
-//     const borrowFeePerHour = getBorrowingFeeRateUsd(marketInfo, isLong, sizeInUsd, CHART_PERIODS["1h"]);
-//     const fundingFeePerHour = getFundingFeeRateUsd(marketInfo, isLong, sizeInUsd, CHART_PERIODS["1h"]);
-//     const maxNegativePriceImpactUsd = -1n * applyFactor(sizeInUsd, marketInfo.maxPositionImpactFactorForLiquidations);
-//     let priceImpactDeltaUsd = getPriceImpactForPosition(marketInfo, -sizeInUsd, isLong, {
-//         fallbackToZero: true,
-//     });
-//
-//     if (priceImpactDeltaUsd < maxNegativePriceImpactUsd) {
-//         priceImpactDeltaUsd = maxNegativePriceImpactUsd;
-//     }
-//
-//     // Ignore positive price impact
-//     if (priceImpactDeltaUsd > 0) {
-//         priceImpactDeltaUsd = 0n;
-//     }
-//
-//     const totalFeesPerHour =
-//         bigMath.abs(borrowFeePerHour) + (fundingFeePerHour < 0 ? bigMath.abs(fundingFeePerHour) : 0n);
-//
-//     if (totalFeesPerHour == 0n) return;
-//
-//     const hours =
-//         ((netValue + priceImpactDeltaUsd - liquidationCollateralUsd) * BASIS_POINTS_DIVISOR_BIGINT) / totalFeesPerHour;
-//
-//     return parseFloat(formatAmount(hours, 4, 2));
-// }
+export function getEstimatedLiquidationTimeInHours(
+    position: PositionInfo,
+    minCollateralUsd: bigint | undefined
+): number | undefined {
+    const { marketInfo, isLong, sizeInUsd, isOpening, netValue } = position;
+
+    if (isOpening || minCollateralUsd === undefined || !marketInfo) return;
+
+    let liquidationCollateralUsd = applyFactor(sizeInUsd, marketInfo.minCollateralFactor);
+    if (liquidationCollateralUsd < minCollateralUsd) {
+        liquidationCollateralUsd = minCollateralUsd;
+    }
+    const borrowFeePerHour = getBorrowingFeeRateUsd(marketInfo, isLong, sizeInUsd, CHART_PERIODS["1h"]);
+    const fundingFeePerHour = getFundingFeeRateUsd(marketInfo, isLong, sizeInUsd, CHART_PERIODS["1h"]);
+    const maxNegativePriceImpactUsd = -1n * applyFactor(sizeInUsd, marketInfo.maxPositionImpactFactorForLiquidations);
+    let priceImpactDeltaUsd = getPriceImpactForPosition(marketInfo, -sizeInUsd, isLong, {
+        fallbackToZero: true,
+    });
+
+    if (priceImpactDeltaUsd < maxNegativePriceImpactUsd) {
+        priceImpactDeltaUsd = maxNegativePriceImpactUsd;
+    }
+
+    // Ignore positive price impact
+    if (priceImpactDeltaUsd > 0) {
+        priceImpactDeltaUsd = 0n;
+    }
+
+    const totalFeesPerHour =
+        bigMath.abs(borrowFeePerHour) + (fundingFeePerHour < 0 ? bigMath.abs(fundingFeePerHour) : 0n);
+
+    if (totalFeesPerHour == 0n) return;
+
+    const hours =
+        ((netValue + priceImpactDeltaUsd - liquidationCollateralUsd) * BASIS_POINTS_DIVISOR_BIGINT) / totalFeesPerHour;
+
+    return parseFloat(formatAmount(hours, 4, 2));
+}
 
 export function formatEstimatedLiquidationTime(hours?: number | undefined) {
     if (!hours) return;

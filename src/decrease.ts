@@ -1,38 +1,30 @@
 import { MarketInfo } from "@gmx-io/sdk/build/types/src/types/markets";
 import { PositionInfo } from "@gmx-io/sdk/build/types/src/types/positions";
 import { TokenData } from "@gmx-io/sdk/build/types/src/types/tokens";
-// import { DecreasePositionAmounts } from "@gmx-io/sdk/build/types/src/types/trade";
 import { ethers } from "ethers";
 
 import { BASIS_POINTS_DIVISOR_BIGINT, DEFAULT_ACCEPTABLE_PRICE_IMPACT_BUFFER } from "./sdk/configs/factors.js";
 
 import { DecreasePositionSwapType, OrderType } from "./sdk/types/orders.js";
 
-// import {
-//     PositionInfo,
-//     PositionInfoLoaded,
-//     getLeverage,
-//     getLiquidationPrice,
-//     getMinCollateralFactorForPosition,
-//     getPositionPnlUsd,
-// } from "domain/synthetics/positions";
-//
-//
 import { convertToTokenAmount, convertToUsd } from "./domain/synthetics/tokens/utils.js";
 
 import { getPositionFee } from "./sdk/utils/fees//index.js";
-import { DecreasePositionAmounts, NextPositionValues } from "./sdk/types/trade.js";
+import { DecreasePositionAmounts } from "./sdk/types/trade.js";
 import { getSwapStats } from "./sdk/utils/swap/swapStats";
 import { bigMath } from "./sdk/utils/bigmath.js";
 import { applyFactor, getBasisPoints, roundUpDivision, expandDecimals, USD_DECIMALS } from "./sdk/utils/numbers.js";
 import { getIsEquivalentTokens } from "./sdk/utils/tokens.js";
-//
+
 import {
     getAcceptablePriceInfo,
     getDefaultAcceptablePriceImpactBps,
     getMarkPrice,
     getOrderThresholdType,
 } from "./sdk/prices.js";
+
+import { getLeverage, getPositionPnlUsd } from "./sdk/utils/positions.js";
+import { UserReferralInfo } from "./sdk/types/referrals.js";
 
 const DUST_USD = expandDecimals(1, USD_DECIMALS);
 
@@ -53,7 +45,6 @@ export function getDecreasePositionAmounts(p: {
     isLimit?: boolean;
     limitPrice?: bigint;
     triggerOrderType?: DecreasePositionAmounts["triggerOrderType"];
-
     receiveToken?: TokenData;
 }) {
     const {
@@ -66,6 +57,7 @@ export function getDecreasePositionAmounts(p: {
         triggerPrice,
         fixedAcceptablePriceImpactBps,
         acceptablePriceImpactBuffer,
+        userReferralInfo,
         minCollateralUsd,
         minPositionSizeUsd,
         uiFeeFactor,
@@ -434,11 +426,6 @@ export function getIsFullClose(p: {
     }
 
     return false;
-}
-
-export function getMinCollateralUsdForLeverage(position: PositionInfoLoaded, openInterestDelta: bigint) {
-    const minCollateralFactor = getMinCollateralFactorForPosition(position, openInterestDelta);
-    return applyFactor(position.sizeInUsd, minCollateralFactor);
 }
 
 export function payForCollateralCost(p: {
