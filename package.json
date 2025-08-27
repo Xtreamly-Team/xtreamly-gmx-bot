@@ -19,14 +19,20 @@
     "lodash": "^4.17.21",
     "node-cron": "^4.2.1",
     "pg": "^8.16.3",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
     "viem": "^2.34.0",
-    "wagmi": "^2.16.4"
+    "wagmi": "^2.16.4",
+    "yamljs": "^0.3.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",
     "@types/lodash": "^4.17.20",
     "@types/node": "^24.1.0",
     "@types/pg": "^8.15.5",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@types/swagger-ui-express": "^4.1.8",
+    "@types/yamljs": "^0.2.34",
     "typescript": "^5.8.3"
   }
 }

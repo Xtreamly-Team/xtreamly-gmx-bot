@@ -133,15 +133,17 @@ export class GMX {
 
         await this._ensureTokenBalanceAndAllowance(BigInt(amount) * 10n ** 6n); // IN USDC
 
+        const payAmount = Math.floor(amount / leverage);
+
         if (!this.marketAddresses[market]) {
             console.error(`Market ${market} not initialized`);
             return;
         }
         console.log(this.marketAddresses[market], "Market address for", market);
         if (side == 'long') {
-            console.log("Openning long")
+            console.log("Opening long")
             const res = await this.sdk.orders.long({
-                payAmount: BigInt(amount) * 10n ** 6n, // IN USDC
+                payAmount: BigInt(payAmount) * 10n ** 6n, // IN USDC
                 marketAddress: this.marketAddresses[market],
                 payTokenAddress: this.tokenAddresses[baseToken],
                 collateralTokenAddress: this.tokenAddresses[baseToken],
@@ -151,7 +153,7 @@ export class GMX {
             return res
         } else if (side == 'short') {
             const res = await this.sdk.orders.short({
-                payAmount: BigInt(amount) * 10n ** 6n, // IN USDC
+                payAmount: BigInt(payAmount) * 10n ** 6n, // IN USDC
                 marketAddress: this.marketAddresses[market],
                 payTokenAddress: this.tokenAddresses[baseToken],
                 collateralTokenAddress: this.tokenAddresses[baseToken],

@@ -38,6 +38,8 @@ export async function perpReset(
             }
         )
 
+        console.log("Created strategy")
+
         return {
             'status': 'success',
             'message': 'Strategy reset successfully',
@@ -63,7 +65,9 @@ export async function perpStart() {
             }
         }
 
-        cron.schedule("* * * * * *", async () => {
+        await strategy.initialize()
+
+        cron.schedule("* * * * *", async () => {
             console.log("Running task every minute:", new Date().toISOString());
             await strategy.execute()
         })

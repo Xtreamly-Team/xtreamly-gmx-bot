@@ -23,11 +23,12 @@ export class PerpStrategy {
         keepStrategyHorizonMin?: number;
         baseAsset?: string;
     }) {
+        console.warn(params)
         this.walletPrivkey = params.walletPrivkey;
         this.token = params.token;
         this.basePositionSize = params.basePositionSize;
         this.leverage = params.leverage;
-        this.keepStrategyHorizonMin = params.keepStrategyHorizonMin ?? 240;
+        this.keepStrategyHorizonMin = params.keepStrategyHorizonMin ?? 60;
         this.baseAsset = params.baseAsset ?? "USDC";
 
         const now = Math.floor(Date.now() / 1000);
@@ -35,7 +36,6 @@ export class PerpStrategy {
         this.lastReceivedShortSignalTime = now;
 
         this.gmx = new GMX(this.walletPrivkey);
-
         this.xtreamly = new Xtreamly()
 
     }
@@ -104,7 +104,6 @@ export class PerpStrategy {
                     console.log("Flipping long position to short")
                     console.log("closing long position")
                     await this.gmx.closePosition(this.token);
-                    // const orderSize = position.sizeInUsd + BigInt(this.basePositionSize);
                     console.log("Opening short position")
                     const res = await this.gmx.openPosition(this.token, 'short', this.basePositionSize, this.leverage);
                     console.log(res)

@@ -1,11 +1,15 @@
 import express from "express";
+import swaggerUi from "swagger-ui-express";
+import swaggerJSDoc from "swagger-jsdoc";
 
 import { perpReset, perpStart } from "./run_perpetual.js";
+import YAML from "yamljs"
 
 const app = express();
+app.use(express.json());
+const spec = YAML.load("src/openapi.yaml");
 const port = 3000;
 
-// Dummy placeholder for your async functions
 async function _perp_reset(
     wallet_address: string,
     wallet_private_key: string,
@@ -30,18 +34,17 @@ async function _perp_start() {
     return await perpStart();
 }
 
-// GET /perp_reset
-app.get("/perp_reset", async (req, res) => {
+app.post("/perp_reset", async (req, res) => {
     try {
         const {
             wallet_address,
             wallet_private_key,
             token = "ETH",
-            base_position_size = 0.005,
+            base_position_size = 20,
             leverage = 3,
             keep_strategy_horizon_min = 60,
             base_asset = "USDC",
-        } = req.query;
+        } = req.body
 
 
         const result = await _perp_reset(
@@ -61,7 +64,6 @@ app.get("/perp_reset", async (req, res) => {
     }
 });
 
-// GET /perp_start
 app.get("/perp_start", async (req, res) => {
     try {
         const result = await _perp_start();
@@ -72,6 +74,21 @@ app.get("/perp_start", async (req, res) => {
     }
 });
 
-app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
+// Swagger definition
+const swaggerSpec = swaggerJSDoc({
+    definition: {
+        openapi: "3.0.0",
+        info: {
+            title: "Xtreamly GXM bot server",
+            version: "1.0.0",
+            description: "Xtreamly GMX bot server API documentation",
+        },
+    },
+    apis: [__filename],
+});
+
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(spec));
+
+app.listen(port, '0.0.0.0', () => {
+    console.log(`Server running at port ${port}`);
 });

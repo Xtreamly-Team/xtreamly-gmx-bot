@@ -1,0 +1,99 @@
+openapi: 3.0.0
+info:
+  title: Perp API
+  version: 1.0.0
+
+paths:
+  /perp_reset:
+    post:
+      summary: Reset perpetual trading strategy
+      description: |
+        Resets a perpetual trading strategy with the given wallet credentials, token, leverage, and strategy parameters.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - wallet_address
+                - wallet_private_key
+              properties:
+                wallet_address:
+                  type: string
+                  description: Wallet public address
+                  example: "0x1234abcd5678efgh"
+                wallet_private_key:
+                  type: string
+                  description: Wallet private key (keep secure!)
+                  example: "0xabcd1234..."
+                token:
+                  type: string
+                  description: Token symbol to trade
+                  default: ETH
+                  example: "ETH"
+                base_position_size:
+                  type: number
+                  description: Base position size
+                  default: 20
+                  example: 20
+                leverage:
+                  type: integer
+                  description: Leverage multiplier
+                  default: 3
+                  example: 3
+                keep_strategy_horizon_min:
+                  type: integer
+                  description: Keep Strategy horizon in minutes
+                  default: 60
+                  example: 60
+                base_asset:
+                  type: string
+                  description: Base asset used for trading
+                  default: USDC
+                  example: "USDC"
+      responses:
+        "200":
+          description: Successful reset response
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Result returned by `_perp_reset` function
+                additionalProperties: true
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Internal Server Error
+
+  /perp_start:
+    get:
+      summary: Start perpetual trading strategy
+      description: |
+        Starts the perpetual trading strategy. Returns the current status or configuration.
+      responses:
+        "200":
+          description: Successful start response
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Result returned by `_perp_start` function
+                additionalProperties: true
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Internal Server Error
+

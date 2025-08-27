@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 export class Xtreamly {
     private baseUrl: string;
     constructor() {
