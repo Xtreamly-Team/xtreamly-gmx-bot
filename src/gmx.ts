@@ -189,8 +189,6 @@ export class GMX {
     }
 
     async _closePosition(position: PositionInfo, baseToken: 'USDC', allowedSlippageBps: number = 10000) {
-        console.log("Closing position:", position);
-
         const tx = await this.sdk.orders.createDecreaseOrder({
             marketInfo: position.marketInfo!,
             marketsInfoData: this.marketsInfoData,
