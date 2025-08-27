@@ -31,7 +31,8 @@ export class GMX {
         'SOL': '0x09400D9DB990D5ed3f35D7be61DfAEB900Af03C9',
         'BTC': '0x7C11F78Ce78768518D743E81Fdfa2F860C6b9A77',
     };
-    // private marketInfos: Record<string, MarketInfo> = {};
+
+    // These two will be populated in initializeMarkets
     private tokensData!: TokensData;
     private marketsInfoData!: MarketsInfoData;
 
@@ -71,14 +72,6 @@ export class GMX {
         }
         this.marketsInfoData = marketsInfoData;
         this.tokensData = tokensData;
-        // console.log(marketsInfoData)
-        return
-
-        // this.marketInfos = Object.fromEntries(
-        //     Object.entries(marketsInfoData).map(([market, marketInfo]) => {
-        //         return [market, marketInfo];
-        //     })
-        // );
 
     }
 
@@ -135,7 +128,7 @@ export class GMX {
         }
     }
 
-    async openPosition(market: 'ETH' | 'BTC' | 'SOL', side: 'long' | 'short', amount: number, leverage: number = 5) {
+    async openPosition(market: 'ETH' | 'BTC' | 'SOL', side: 'long' | 'short', amount: number, leverage: number = 5, baseToken: string = 'USDC') {
 
 
         await this._ensureTokenBalanceAndAllowance(BigInt(amount) * 10n ** 6n); // IN USDC
@@ -149,32 +142,30 @@ export class GMX {
             console.log("Openning long")
             const res = await this.sdk.orders.long({
                 payAmount: BigInt(amount) * 10n ** 6n, // IN USDC
-                // marketAddress: '0x70d95587d40A2caf56bd97485aB3Eec10Bee6336',
                 marketAddress: this.marketAddresses[market],
-                payTokenAddress: this.tokenAddresses['USDC'],
-                collateralTokenAddress: this.tokenAddresses['USDC'],
+                payTokenAddress: this.tokenAddresses[baseToken],
+                collateralTokenAddress: this.tokenAddresses[baseToken],
                 allowedSlippageBps: 125,
                 leverage: BigInt(leverage) * 10n ** 4n,
             });
-            console.log(res)
+            return res
         } else if (side == 'short') {
             const res = await this.sdk.orders.short({
                 payAmount: BigInt(amount) * 10n ** 6n, // IN USDC
-                // marketAddress: '0x70d95587d40A2caf56bd97485aB3Eec10Bee6336',
                 marketAddress: this.marketAddresses[market],
-                payTokenAddress: this.tokenAddresses['USDC'],
-                collateralTokenAddress: this.tokenAddresses['USDC'],
+                payTokenAddress: this.tokenAddresses[baseToken],
+                collateralTokenAddress: this.tokenAddresses[baseToken],
                 allowedSlippageBps: 125,
                 leverage: BigInt(leverage) * 10n ** 4n,
             });
-            console.log(res)
+            return res
         } else {
             throw new Error(`Unknown side: ${side}`);
         }
     }
 
 
-    async getPositions() {
+    async getOpenPositions() {
         const openPositions = await this.sdk.positions.getPositionsInfo({
             marketsInfoData: this.marketsInfoData,
             tokensData: this.tokensData,
@@ -188,73 +179,54 @@ export class GMX {
                 if (!positions[market]) {
                     positions[market] = [];
                 }
-                // position.clo
                 positions[market].push(position);
-                // console.log(positions[market])
             }
         }
 
         return positions
     }
 
-    async _closePosition(position: PositionInfo) {
-
-        // const tx = await this.sdk.orders.createDecreaseOrder({
-        //     marketInfo: position.marketInfo!,
-        //     marketsInfoData: this.marketsInfoData,
-        //     tokensData: this.tokensData,
-        //     isLong: position.isLong,
-        //     allowedSlippage: 125,
-        //     collateralToken: this.tokensData['USDC'],
-        //     decreaseAmounts: {
-        //         isFullClose: true,
-        //         sizeDeltaUsd: position.sizeInUsd,
-        //         sizeDeltaInTokens: position.sizeInTokens,
-        //         collateralDeltaUsd: position.collateralAmount,
-        //         collateralDeltaAmount: position.collateralAmount,
-        //
-        //         // indexPrice: position.markPrice,
-        //         // collateralPrice: position.price
-        //         acceptablePrice: position.markPrice,
-        //         positionFeeUsd: position.closingFeeUsd,
-        //         // collateralDeltaAmount: position.collateralAmount,
-        //     },
-        // });
-        // console.log(tx)
-    }
-
-    async closePosition(market: 'ETH' | 'BTC' | 'SOL') {
-        const position: PositionInfo = (await this.getPositions())[market][0]
+    async _closePosition(position: PositionInfo, baseToken: 'USDC', allowedSlippageBps: number = 10000) {
+        console.log("Closing position:", position);
 
         const tx = await this.sdk.orders.createDecreaseOrder({
-            marketInfo: this.marketsInfoData[this.marketAddresses[market]],
+            marketInfo: position.marketInfo!,
             marketsInfoData: this.marketsInfoData,
             tokensData: this.tokensData,
             isLong: position.isLong,
-            allowedSlippage: 10000,
+            allowedSlippage: allowedSlippageBps,
             decreaseAmounts: getDecreasePositionAmounts({
-                marketInfo: this.marketsInfoData[this.marketAddresses[market]],
-                collateralToken: this.tokensData[this.tokenAddresses['USDC']],
+                marketInfo: position.marketInfo!,
+                collateralToken: this.tokensData[this.tokenAddresses[baseToken]],
                 isLong: position.isLong,
                 position: position,
                 closeSizeUsd: position.sizeInUsd,
                 keepLeverage: true,
-                // triggerPrice undefined,
-                // fixedAcceptablePriceImpactBps: undefined,
                 userReferralInfo: undefined,
                 minCollateralUsd: 0n,
                 minPositionSizeUsd: 0n,
                 uiFeeFactor: 0n,
                 isLimit: false,
-                // limitPrice: undefined,
-                // triggerOrderType: undefined,
-                receiveToken: this.tokensData[this.tokenAddresses['USDC']],
+                receiveToken: this.tokensData[this.tokenAddresses[baseToken]],
 
             }),
-            collateralToken: this.tokensData[this.tokenAddresses['USDC']],
+            collateralToken: this.tokensData[this.tokenAddresses[baseToken]],
             referralCode: undefined,
             isTrigger: false,
         });
+    }
+
+    async closePosition(market: 'ETH' | 'BTC' | 'SOL', allowedSlippageBps: number = 10000) {
+        const marketPositions = await this.getOpenPositions();
+        if (!marketPositions[market] || marketPositions[market].length == 0) {
+            console.warn(`No open positions for market ${market} to close`);
+            return;
+        }
+        if (marketPositions[market].length > 1) {
+            console.warn(`Multiple open positions for market ${market}, closing the first one`);
+        }
+        const position: PositionInfo = marketPositions[market][0];
+        await this._closePosition(position, 'USDC', allowedSlippageBps)
     }
 
 

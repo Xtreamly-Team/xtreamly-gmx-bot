@@ -1,5 +1,4 @@
 import { GMX } from './gmx.js';
-import { Xtreamly } from './xtreamly.js';
 require('dotenv').config();
 
 
