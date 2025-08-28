@@ -173,7 +173,7 @@ export class GMX {
             tokensData: this.tokensData,
             showPnlInLeverage: true,
         });
-        let positions: Record<string, any[]> = {}
+        let positions: Record<string, PositionInfo[]> = {}
 
         for (let position of Object.values(openPositions)) {
             const market = this.marketAddressToMarket(position.marketAddress);
