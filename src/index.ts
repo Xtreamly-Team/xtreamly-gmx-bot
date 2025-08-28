@@ -1,3 +1,4 @@
+import { Monitoring } from './db.js';
 import { GMX } from './gmx.js';
 require('dotenv').config();
 
@@ -20,14 +21,18 @@ async function main() {
     // await strategy.initialize();
 
     // await strategy.close()
-    const gmx = new GMX(privateKey);
-    await gmx.initialzeMarkets();
+    // const gmx = new GMX(privateKey);
+    // await gmx.initialzeMarkets();
     // await gmx.openPosition('SOL', 'short', 10, 5);
     // const positions = await gmx.getPositions()
     // const solPosition = positions['SOL'][0];
     // console.log(solPosition)
-    await gmx.closePosition('SOL')
+    // await gmx.closePosition('SOL')
+    //
 
+    const monitoring = new Monitoring()
+    await monitoring.connect()
+    await monitoring.insertEvent('bot_123', 'test_event', { foo: 'bar', count: 1 })
 }
 
 main()
