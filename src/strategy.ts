@@ -216,7 +216,10 @@ export class PerpStrategy {
                                 }
                             })
                             await this.gmx.closePosition(this.token);
-                            await this.monitoring.insertEvent(this.bot_id, 'closed_position_long', position)
+                            await this.monitoring.insertEvent(this.bot_id, 'closed_position_long', {
+                                'side': position.isLong ? 'long' : 'short',
+                                'size': Number(position.sizeInUsd / usdDivisor)
+                            })
                         } else {
                             console.log("Keeping long position open")
                             await this.monitoring.insertEvent(this.bot_id, 'keeping_position_long', {
@@ -244,7 +247,10 @@ export class PerpStrategy {
                                 }
                             })
                             await this.gmx.closePosition(this.token);
-                            await this.monitoring.insertEvent(this.bot_id, 'closed_position_short', position)
+                            await this.monitoring.insertEvent(this.bot_id, 'closed_position_short', {
+                                'side': position.isLong ? 'long' : 'short',
+                                'size': Number(position.sizeInUsd / usdDivisor)
+                            })
                         } else {
                             console.log("Keeping short position open")
                             await this.monitoring.insertEvent(this.bot_id, 'keeping_position_short', {
