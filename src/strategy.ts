@@ -73,6 +73,7 @@ export class PerpStrategy {
 
             if (signal.long && signal.short) {
                 console.error("Received both long and short signals, cannot proceed with strategy.");
+                await this.monitoring.insertEvent(this.bot_id, 'signal_confusing', signal)
                 return
             }
 
