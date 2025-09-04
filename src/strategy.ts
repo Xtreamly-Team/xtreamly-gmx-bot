@@ -1,6 +1,5 @@
 import { Monitoring } from "./db";
 import { GMX } from "./gmx";
-import { formatTimestamp } from "./utils";
 import { Xtreamly } from "./xtreamly";
 // const { privateKeyToAccount } = require('viem/accounts');
 import { privateKeyToAddress } from "viem/accounts";
@@ -12,6 +11,7 @@ export class PerpStrategy {
     private baseAsset: string;
     private basePositionSize: number;
     private leverage: number;
+    private signalHorizonMin: number;
     private keepStrategyHorizonMin: number;
     private lastReceivedLongSignalTime: number;
     private lastReceivedShortSignalTime: number;
@@ -22,18 +22,22 @@ export class PerpStrategy {
     bot_id: string;
 
     constructor(params: {
+        bot_id: string;
         walletPrivkey: string;
         token: 'ETH' | 'SOL' | 'BTC';
         basePositionSize: number;
         leverage: number;
+        signalHorizonMin: number;
         keepStrategyHorizonMin?: number;
         baseAsset?: string;
     }) {
         console.warn(params)
+        this.bot_id = params.bot_id;
         this.walletPrivkey = params.walletPrivkey;
         this.token = params.token;
         this.basePositionSize = params.basePositionSize;
         this.leverage = params.leverage;
+        this.signalHorizonMin = params.signalHorizonMin;
         this.keepStrategyHorizonMin = params.keepStrategyHorizonMin ?? 60;
         this.baseAsset = params.baseAsset ?? "USDC";
 
@@ -44,17 +48,8 @@ export class PerpStrategy {
         this.gmx = new GMX(this.walletPrivkey);
         this.xtreamly = new Xtreamly()
         this.monitoring = new Monitoring()
-        this.bot_id = `perp_gmx_${this.token.toUpperCase()}_${privateKeyToAddress(this.walletPrivkey)}_${formatTimestamp(Date.now())}_${Math.floor(Math.random() * 100) + 1}`
+        // this.bot_id = `perp_gmx_${this.token.toUpperCase()}_${privateKeyToAddress(this.walletPrivkey)}_${formatTimestamp(Date.now())}_${Math.floor(Math.random() * 100) + 1}`
 
-    }
-
-    async initialize() {
-        await this.monitoring.connect()
-        await this.gmx.initialzeMarkets();
-        console.log("Bot Initialized: ", this.bot_id)
-        await this.monitoring.insertBot(this.bot_id, 'GMX', this.token, {})
-        await this.monitoring.insertEvent(this.bot_id, 'bot_initialized', {})
-        await this.monitoring.disconnect()
     }
 
     async execute() {
