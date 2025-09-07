@@ -1,0 +1,33 @@
+# Example Terraform variables file for Xtreamly GMX Bot
+# Copy this file to terraform.tfvars and update with your values
+
+# Required variables
+project_id = "your-gcp-project-id"
+
+# Optional variables (with defaults)
+region           = "us-central1"
+function_name    = "processGmxTradingSignal"
+topic_name       = "trading-signals"
+environment      = "prod"
+
+# Bot configuration
+bot_ids = [
+  "bot-1",
+  "bot-2",
+  "bot-3"
+]
+
+# Monitoring configuration
+alert_email = "alerts@yourcompany.com"
+enable_monitoring = true
+
+# Function configuration
+function_memory  = "512M"
+function_timeout = 540
+max_instances    = 10
+min_instances    = 0
+
+# VPC configuration (if needed for private database access)
+enable_vpc_connector = false
+# vpc_network = "your-vpc-network"
+# vpc_subnet  = "your-vpc-subnet"

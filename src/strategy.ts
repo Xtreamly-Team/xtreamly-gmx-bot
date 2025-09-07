@@ -1,6 +1,5 @@
 import { Monitoring } from "./db";
 import { GMX } from "./gmx";
-import { Xtreamly } from "./xtreamly";
 // const { privateKeyToAccount } = require('viem/accounts');
 import { privateKeyToAddress } from "viem/accounts";
 
@@ -17,7 +16,6 @@ export class PerpStrategy {
     private lastReceivedShortSignalTime: number;
 
     private gmx: GMX;
-    private xtreamly: Xtreamly
     private monitoring: Monitoring;
     bot_id: string;
 
@@ -46,24 +44,44 @@ export class PerpStrategy {
         this.lastReceivedShortSignalTime = now;
 
         this.gmx = new GMX(this.walletPrivkey);
-        this.xtreamly = new Xtreamly()
         this.monitoring = new Monitoring()
         // this.bot_id = `perp_gmx_${this.token.toUpperCase()}_${privateKeyToAddress(this.walletPrivkey)}_${formatTimestamp(Date.now())}_${Math.floor(Math.random() * 100) + 1}`
 
     }
 
-    async execute() {
+    async execute(signalData?: any) {
         this.monitoring = new Monitoring()
         const usdDivisor = 10n ** 30n;
         try {
             await this.monitoring.connect()
             await this.monitoring.insertEvent(this.bot_id, 'execution', {})
-            const signals = await this.xtreamly.getSignals();
 
-            for (let signal of signals) {
+            // Use signal data from pub/sub message instead of API call
+            if (!signalData) {
+                console.warn("No signal data provided")
+                return
+            }
+
+            console.log("Processing signal data from pub/sub message")
+
+            // Extract signals from the pub/sub message
+            let signals = signalData.signals || []
+            if (typeof signals === 'string') {
+                signals = JSON.parse(signals)
+            }
+
+            // Convert to the format expected by the rest of the method
+            const formattedSignals = signals.map((signal: any) => ({
+                symbol: signal.symbol,
+                long: signal.signal_long,
+                short: signal.signal_short,
+                horizon: signal.horizon
+            }))
+
+            for (let signal of formattedSignals) {
                 console.log(`Signal: ${signal.symbol}, Long: ${signal.long}, Short: ${signal.short}, Horizon: ${signal.horizon} minutes`);
             }
-            const signal = signals.filter(signal => signal.symbol === this.token)[0];
+            const signal = formattedSignals.filter((signal: any) => signal.symbol === this.token)[0];
             await this.monitoring.insertEvent(this.bot_id, 'signal_received', signal)
 
             if (signal.long && signal.short) {
@@ -280,4 +298,5 @@ export class PerpStrategy {
             await this.monitoring.disconnect()
         }
     }
+
 }

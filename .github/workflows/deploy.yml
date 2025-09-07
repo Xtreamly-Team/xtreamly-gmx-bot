@@ -1,0 +1,75 @@
+name: Deploy GMX Bot Function
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'tsconfig.json'
+  workflow_dispatch: # Allow manual trigger
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION: us-central1
+  FUNCTION_NAME: processGmxTradingSignal
+  TOPIC_NAME: trading-signals
+
+jobs:
+  deploy:
+    name: Deploy GMX Bot Function
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build TypeScript
+      run: npm run build
+      
+    - name: Setup Google Cloud CLI
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+        service_account_key: ${{ secrets.GCP_SA_KEY }}
+        export_default_credentials: true
+        
+    - name: Deploy Cloud Function
+      run: |
+        gcloud functions deploy ${{ env.FUNCTION_NAME }} \
+          --runtime=nodejs18 \
+          --trigger-topic=${{ env.TOPIC_NAME }} \
+          --source=. \
+          --entry-point=processPubsubMessage \
+          --region=${{ env.GCP_REGION }} \
+          --project=${{ secrets.GCP_PROJECT_ID }} \
+          --memory=512MB \
+          --timeout=540s \
+          --max-instances=10 \
+          --set-env-vars="GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}" \
+          --allow-unauthenticated
+          
+    - name: Test Function
+      run: |
+        echo "Testing function with sample message..."
+        gcloud pubsub topics publish ${{ env.TOPIC_NAME }} \
+          --message='{"type":"trading_signal","signals":[{"symbol":"ETH","signal_long":true,"signal_short":false,"horizon":240}]}' \
+          --project=${{ secrets.GCP_PROJECT_ID }}
+          
+        # Wait a moment for processing
+        sleep 5
+        
+        # Check logs
+        gcloud functions logs read ${{ env.FUNCTION_NAME }} \
+          --region=${{ env.GCP_REGION }} \
+          --project=${{ secrets.GCP_PROJECT_ID }} \
+          --limit=5
