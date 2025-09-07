@@ -2,10 +2,12 @@ require('dotenv').config();
 
 export class Xtreamly {
     private baseUrl: string;
+    
     constructor() {
-        this.baseUrl = process.env.XTREAMLY_API_BASE_URL || '';
+        this.baseUrl = process.env.SIGNAL_API_BASE_URL || '';
+        
         if (!this.baseUrl) {
-            throw new Error("XTREAMLY_API_BASE_URL is not set in environment variables.");
+            throw new Error("SIGNAL_API_BASE_URL is not set in environment variables.");
         }
     }
 
@@ -17,16 +19,19 @@ export class Xtreamly {
             },
         })
         if (!res.ok) {
-            throw new Error(`Error fetching signals: ${res.status} ${res.statusText}`);
+            if (res.status === 404) {
+                throw new Error(`Signal endpoint not found. Status: ${res.status}`);
+            } else {
+                throw new Error(`Error fetching signals: ${res.status} ${res.statusText}`);
+            }
         }
-        const resObj = await res.json()
-        const signals: Signal[] = JSON.parse(resObj).map((signal: any) => ({
+        const signals = await res.json()
+        return signals.map((signal: any) => ({
             symbol: signal.symbol,
             long: signal.signal_long,
             short: signal.signal_short,
             horizon: signal.horizon,
         }));
-        return signals
     }
 }
 
