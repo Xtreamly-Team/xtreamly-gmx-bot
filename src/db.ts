@@ -103,7 +103,6 @@ export class BotRegistry extends DB {
             JOIN wallets w 
                 ON b.wallet_id = w.wallet_id
             WHERE b.is_initialized = TRUE AND b.is_active = TRUE AND b.exchange = 'gmx';
-            ;
         `;
 
         const botRes = await this.client.query(botQuery);

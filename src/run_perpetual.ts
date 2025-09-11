@@ -49,7 +49,8 @@ export async function startInstance() {
                         }
                     )
                     console.log(`Bot ID: ${bot.id}, Exchange: ${bot.exchange}, Token: ${bot.token}, Size: ${bot.positionSize}, Leverage: ${bot.leverage}`);
-                    // await strategy.execute()
+
+                    await strategy.execute()
                 } catch (e) {
                     console.error(`Error executing strategy for bot ID ${bot.id}:`, e);
                 }
