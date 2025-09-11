@@ -102,9 +102,9 @@ export class BotRegistry extends DB {
             FROM bots b
             JOIN wallets w 
                 ON b.wallet_id = w.wallet_id
+            WHERE b.is_initialized = TRUE AND b.is_active = TRUE AND b.exchange = 'gmx';
             ;
         `;
-        // WHERE b.is_initialized = TRUE AND b.is_active = TRUE AND b.exchange = 'gmx';
 
         const botRes = await this.client.query(botQuery);
         const bots: Bot[] = [];
