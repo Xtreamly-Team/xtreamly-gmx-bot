@@ -2,13 +2,13 @@ import express from "express";
 import swaggerUi from "swagger-ui-express";
 import swaggerJSDoc from "swagger-jsdoc";
 
-import { perpReset, startInstance } from "./run_perpetual.js";
+import { startInstance } from "./run_perpetual.js";
 import YAML from "yamljs"
 
 const app = express();
 app.use(express.json());
 const spec = YAML.load("src/openapi.yaml");
-const port = 3000;
+const port = 3001;
 
 app.get("/start", async (req, res) => {
     try {

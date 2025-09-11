@@ -31,6 +31,8 @@ export async function startInstance() {
             const bots = await botRegistery.readBots()
 
             for (let bot of bots) {
+                console.log(bot)
+                // continue
 
                 try {
 
