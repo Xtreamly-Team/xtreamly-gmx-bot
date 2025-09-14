@@ -30,9 +30,17 @@ jobs:
       - name: "Set up Cloud SDK"
         uses: "google-github-actions/setup-gcloud@v1"
 
-      - name: "Build and Push Image"
+      - name: "Configure Docker for GCR"
         run: |-
-          gcloud builds submit --tag "eu.gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA"
+          gcloud auth configure-docker
+
+      - name: "Build Docker Image"
+        run: |-
+          docker build -t "eu.gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA" .
+
+      - name: "Push Docker Image to GCR"
+        run: |-
+          docker push "eu.gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA"
 
       - name: "Deploy to Cloud Run"
         run: |-
@@ -43,7 +51,7 @@ jobs:
             --allow-unauthenticated \
             --set-env-vars="NODE_ENV=production" \
             --set-env-vars="ARB_RPC_URL=${{ secrets.ARB_RPC_URL }}" \
-            --set-env-vars="DATABASE_URL=${{ secrets.DATABASE_URL }}"
+            --set-env-vars="DATABASE_URL=${{ secrets.DATABASE_URL }}" \
             --set-env-vars="DB_HOST=${{ secrets.DB_HOST }}" \
             --set-env-vars="DB_USER=${{ secrets.DB_USER }}" \
             --set-env-vars="DB_PASSWORD=${{ secrets.DB_PASSWORD }}" \
