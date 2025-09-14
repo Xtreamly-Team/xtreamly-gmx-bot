@@ -3,7 +3,7 @@ export class Bot {
     walletAddress: string;
     walletPrivateKey: string;
     exchange: string;
-    token: string;
+    token: 'ETH' | 'SOL' | 'BTC';
     positionSize: number;
     leverage: number;
     initialized: boolean;
@@ -15,7 +15,7 @@ export class Bot {
         walletAddress: string,
         walletPrivateKey: string,
         exchange: string,
-        token: string,
+        token: 'ETH' | 'SOL' | 'BTC',
         positionSize: number,
         leverage: number,
         initialized: boolean,

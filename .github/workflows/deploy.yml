@@ -1,0 +1,51 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+
+env:
+  PROJECT_ID: "xtreamly-ai"
+  SERVICE_NAME: gmx-trading-bot
+  REGION: europe-west1
+
+jobs:
+  build-and-deploy:
+    permissions:
+      contents: "read"
+      id-token: "write"
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - id: "auth"
+        uses: "google-github-actions/auth@v1"
+        with:
+          workload_identity_provider: "projects/664616721985/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
+          service_account: "github-actions-sa@xtreamly-ai.iam.gserviceaccount.com"
+
+      - name: "Set up Cloud SDK"
+        uses: "google-github-actions/setup-gcloud@v1"
+
+      - name: "Build and Push Image"
+        run: |-
+          gcloud builds submit --tag "eu.gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA"
+
+      - name: "Deploy to Cloud Run"
+        run: |-
+          gcloud run deploy $SERVICE_NAME \
+            --image "eu.gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA" \
+            --platform managed \
+            --region $REGION \
+            --allow-unauthenticated \
+            --set-env-vars="NODE_ENV=production" \
+            --set-env-vars="ARB_RPC_URL=${{ secrets.ARB_RPC_URL }}" \
+            --set-env-vars="DATABASE_URL=${{ secrets.DATABASE_URL }}"
+            --set-env-vars="DB_HOST=${{ secrets.DB_HOST }}" \
+            --set-env-vars="DB_USER=${{ secrets.DB_USER }}" \
+            --set-env-vars="DB_PASSWORD=${{ secrets.DB_PASSWORD }}" \
+            --set-env-vars="USER_MANAGEMENT_DB_NAME=${{ secrets.USER_MANAGEMENT_DB_NAME }}" \
+            --set-env-vars="MONITORING_DB_NAME=${{ secrets.MONITORING_DB_NAME }}"
