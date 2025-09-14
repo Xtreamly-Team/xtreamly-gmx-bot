@@ -93,7 +93,7 @@ export class GMX {
 
         const balance = await this.sdk.publicClient.readContract({
             abi: erc20Abi,
-            address: this.tokenAddresses['USDC'],
+            address: this.tokenAddresses['USDC'] as `0x${string}`,
             functionName: "balanceOf",
             args: [this.sdk.walletClient.account!.address],
         });
@@ -107,7 +107,7 @@ export class GMX {
 
         const allowance = await this.sdk.publicClient.readContract({
             abi: erc20Abi,
-            address: this.tokenAddresses['USDC'],
+            address: this.tokenAddresses['USDC'] as `0x${string}`,
             functionName: "allowance",
             args: [this.sdk.walletClient.account!.address, '0x602b805EedddBbD9ddff44A7dcBD46cb07849685'],
         });
@@ -118,10 +118,12 @@ export class GMX {
             console.log("Allowance insufficient. Allowence: ", (allowance / 1_000_000n).toString(), "Needed:", (amount / 1_000_000n).toString());
             const res = await this.sdk.walletClient.writeContract({
                 abi: erc20Abi,
-                address: this.tokenAddresses['USDC'],
+                address: this.tokenAddresses['USDC'] as `0x${string}`,
                 functionName: "approve",
                 // args: ['0x602b805EedddBbD9ddff44A7dcBD46cb07849685', 2390872455461035n],
                 args: ['0x602b805EedddBbD9ddff44A7dcBD46cb07849685', amount],
+                account: this.sdk.walletClient.account || null,
+                chain: null,
             })
             console.log(res)
             console.log("Increased allowance to", (amount / 1_000_000n).toString());

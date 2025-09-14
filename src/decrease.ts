@@ -386,6 +386,10 @@ export function getIsFullClose(p: {
     const { position, sizeDeltaUsd, indexPrice, remainingCollateralUsd, minCollateralUsd, minPositionSizeUsd } = p;
     const { marketInfo, isLong } = position;
 
+    if (!marketInfo) {
+        return false; // Cannot determine if full close without market info
+    }
+
     if (position.sizeInUsd - sizeDeltaUsd < DUST_USD) {
         return true;
     }

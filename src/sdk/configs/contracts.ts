@@ -294,13 +294,13 @@ export const CONTRACTS = {
 };
 
 export function getContract(chainId: number, name: string): Address {
-    if (!CONTRACTS[chainId]) {
+    if (!CONTRACTS[chainId as keyof typeof CONTRACTS]) {
         throw new Error(`Unknown chainId ${chainId}`);
     }
 
-    if (!CONTRACTS[chainId][name]) {
+    if (!(CONTRACTS[chainId as keyof typeof CONTRACTS] as any)[name]) {
         throw new Error(`Unknown contract "${name}" for chainId ${chainId}`);
     }
 
-    return CONTRACTS[chainId][name];
+    return (CONTRACTS[chainId as keyof typeof CONTRACTS] as any)[name];
 }

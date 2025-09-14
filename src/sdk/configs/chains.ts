@@ -129,19 +129,19 @@ const VIEM_CHAIN_BY_CHAIN_ID: Record<UiSupportedChain, Chain> = {
 };
 
 export function getChainName(chainId: number) {
-    return CHAIN_NAMES_MAP[chainId];
+    return CHAIN_NAMES_MAP[chainId as UiContractsChain];
 }
 
 export const getViemChain = (chainId: number): Chain => {
-    return VIEM_CHAIN_BY_CHAIN_ID[chainId];
+    return VIEM_CHAIN_BY_CHAIN_ID[chainId as UiContractsChain];
 };
 
 export function getHighExecutionFee(chainId: number) {
-    return HIGH_EXECUTION_FEES_MAP[chainId] ?? 5;
+    return HIGH_EXECUTION_FEES_MAP[chainId as UiContractsChain] ?? 5;
 }
 
 export function getExcessiveExecutionFee(chainId: number) {
-    return EXCESSIVE_EXECUTION_FEES_MAP[chainId] ?? 10;
+    return EXCESSIVE_EXECUTION_FEES_MAP[chainId as UiContractsChain] ?? 10;
 }
 
 export function isSupportedChain(chainId: number, dev = false) {

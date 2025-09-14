@@ -8,7 +8,7 @@ import YAML from "yamljs";
 const app = express();
 app.use(express.json());
 const spec = YAML.load("src/openapi.yaml");
-const port = process.env.PORT || 3000;
+const port = parseInt(process.env.PORT || "3000", 10);
 
 app.get("/start", async (req, res) => {
   try {

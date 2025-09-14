@@ -1,4 +1,4 @@
-import { getExcessiveExecutionFee, getHighExecutionFee, MIN_EXECUTION_FEE_USD } from "../../configs/chains.js";
+import { getExcessiveExecutionFee, getHighExecutionFee, MIN_EXECUTION_FEE_USD, UiContractsChain } from "../../configs/chains.js";
 import { USD_DECIMALS } from "../../configs/factors.js";
 import { NATIVE_TOKEN_ADDRESS } from "../../configs/tokens.js";
 import { ExecutionFee, GasLimitsConfig, L1ExpressOrderGasReference } from "../../types/fees.js";
@@ -30,7 +30,7 @@ export function getExecutionFee(
     // #endregion
 
     // avoid botanix gas spikes when chain is not actively used
-    const minGasCostUsd = MIN_EXECUTION_FEE_USD[chainId];
+    const minGasCostUsd = MIN_EXECUTION_FEE_USD[chainId as UiContractsChain];
     const minGasCost = convertToTokenAmount(minGasCostUsd, nativeToken.decimals, nativeToken.prices.minPrice);
 
     let feeTokenAmountPerExecution = gasLimit * gasPrice;

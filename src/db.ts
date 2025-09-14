@@ -110,6 +110,10 @@ export class BotRegistry extends DB {
 
         for (const row of botRes.rows) {
             const privateKey = await secretManager.retrievePrivateKey(row.wallet_id);
+            if (!privateKey) {
+                console.error(`Failed to retrieve private key for wallet ${row.wallet_id}`);
+                throw new Error(`Failed to retrieve private key for wallet ${row.wallet_id}`);
+            }
             const newBot = new Bot(
                 row.bot_id,
                 row.public_key,
