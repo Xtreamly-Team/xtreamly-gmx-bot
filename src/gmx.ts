@@ -38,7 +38,8 @@ export class GMX {
 
     constructor(privateKey: string) {
         const rpcUrl = process.env.ARB_RPC_URL;
-        const account = privateKeyToAccount(privateKey);
+        const fixedPrivateKey = privateKey.startsWith('0x') ? privateKey : '0x' + privateKey;
+        const account = privateKeyToAccount(fixedPrivateKey);
 
         this.sdk = new GmxSdk({
             chainId: arbitrum.id,
