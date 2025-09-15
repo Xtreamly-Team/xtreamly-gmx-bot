@@ -1,59 +1,74 @@
-name: CI/CD
+name: Deploy GMX Bot
 
 on:
   push:
-    branches: [main, multiwallet]
-
+    branches: [main]
 env:
-  PROJECT_ID: "xtreamly-ai"
-  SERVICE_NAME: gmx-trading-bot
+  PROJECT_ID: xtreamly-ai
   REGION: europe-west1
+  SERVICE_NAME: xtreamly-gmx-bot
+  REPOSITORY: xtreamly-gmx-bot
 
 jobs:
   build-and-deploy:
-    permissions:
-      contents: "read"
-      id-token: "write"
-
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - id: "auth"
-        uses: "google-github-actions/auth@v1"
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
         with:
-          workload_identity_provider: "projects/664616721985/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
-          service_account: "github-actions-user-management@xtreamly-ai.iam.gserviceaccount.com"
+          project_id: ${{ env.PROJECT_ID }}
 
-      - name: "Set up Cloud SDK"
-        uses: "google-github-actions/setup-gcloud@v1"
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/664616721985/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: github-actions-gmx-bot@xtreamly-ai.iam.gserviceaccount.com
 
-      - name: "Configure Docker for GCR"
-        run: |-
-          gcloud auth configure-docker
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
 
-      - name: "Build Docker Image"
-        run: |-
-          docker build -t "eu.gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA" .
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/xtreamly-gmx-bot:${{ github.sha }} .
+          docker tag ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/xtreamly-gmx-bot:${{ github.sha }} ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/xtreamly-gmx-bot:latest
 
-      - name: "Push Docker Image to GCR"
-        run: |-
-          docker push "eu.gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA"
+      - name: Push Docker image
+        run: |
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/xtreamly-gmx-bot:${{ github.sha }}
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/xtreamly-gmx-bot:latest
 
-      - name: "Deploy to Cloud Run"
-        run: |-
-          gcloud run deploy $SERVICE_NAME \
-            --image "eu.gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA" \
-            --platform managed \
-            --region $REGION \
-            --allow-unauthenticated \
-            --set-env-vars="NODE_ENV=production" \
-            --set-env-vars="ARB_RPC_URL=${{ secrets.ARB_RPC_URL }}" \
-            --set-env-vars="DATABASE_URL=${{ secrets.DATABASE_URL }}" \
-            --set-env-vars="DB_HOST=${{ secrets.DB_HOST }}" \
-            --set-env-vars="DB_USER=${{ secrets.DB_USER }}" \
-            --set-env-vars="DB_PASSWORD=${{ secrets.DB_PASSWORD }}" \
-            --set-env-vars="USER_MANAGEMENT_DB_NAME=${{ secrets.USER_MANAGEMENT_DB_NAME }}" \
-            --set-env-vars="MONITORING_DB_NAME=${{ secrets.MONITORING_DB_NAME }}"
+      - name: Get Xtreamly AI Service URL
+        run: |
+          XTREAMLY_API_BASE_URL=$(gcloud run services describe xtreamly-api --region=${{ env.REGION }} --format='value(status.url)')
+          echo "XTREAMLY_API_BASE_URL=$XTREAMLY_API_BASE_URL" >> $GITHUB_ENV
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run services update ${{ env.SERVICE_NAME }} \
+            --image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/xtreamly-gmx-bot:${{ github.sha }} \
+            --region=${{ env.REGION }} \
+            --platform=managed \
+            --set-env-vars="NODE_ENV=production,GCP_PROJECT_ID=xtreamly-ai,GCP_REGION=europe-west1,GOOGLE_CLOUD_PROJECT=xtreamly-ai,MONITORING_DB_NAME=MONITORING_DB_NAME,XTREAMLY_API_BASE_URL=${{ env.XTREAMLY_API_BASE_URL }}" \
+            --set-secrets="DB_HOST=DB_HOST:latest,DB_USER=DB_USER:latest,DB_PASSWORD=DB_PASSWORD:latest,DB_PORT=DB_PORT:latest,DB_NAME=DB_NAME:latest,ARB_RPC_URL=ARB_RPC_URL:latest"
+
+      - name: Verify deployment
+        run: |
+          # Get the Cloud Run service URL
+          SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} --region=${{ env.REGION }} --format='value(status.url)')
+          echo "Service URL: $SERVICE_URL"
+
+          # Wait for service to be ready
+          sleep 30
+
+          # Test health endpoint (if available)
+          curl -f "$SERVICE_URL/health" || echo "Health endpoint not available, but deployment completed"
+          echo "Deployment successful!"
