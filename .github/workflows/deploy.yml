@@ -36,15 +36,15 @@ jobs:
         run: |
           gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
 
-      - name: Build Docker image
+      - name: Build and Push Docker Image
         run: |
-          docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/xtreamly-gmx-bot:${{ github.sha }} .
-          docker tag ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/xtreamly-gmx-bot:${{ github.sha }} ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/xtreamly-gmx-bot:latest
+          IMAGE_TAG=${{ github.sha }}
+          IMAGE_URL="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/xtreamly-gmx-bot:${IMAGE_TAG}"
+          LATEST_IMAGE_URL="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/xtreamly-gmx-bot:latest"
 
-      - name: Push Docker image
-        run: |
-          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/xtreamly-gmx-bot:${{ github.sha }}
-          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/xtreamly-gmx-bot:latest
+          docker buildx build --platform linux/amd64 -t $IMAGE_URL -t $LATEST_IMAGE_URL --push .
+
+          echo "Pushed image to $IMAGE_URL and $LATEST_IMAGE_URL"
 
       - name: Get Xtreamly AI Service URL
         run: |
