@@ -2,6 +2,7 @@ import cron from "node-cron";
 import { PerpStrategy } from "./strategy";
 import { BotRegistry } from "./db";
 import { Policy } from "./models";
+import { userManagementDb } from "./database_interface";
 
 let strategy: PerpStrategy;
 
@@ -11,34 +12,38 @@ export async function runPerpetualStrategy() {
 
   const policy = new Policy();
 
-  // NOTE: This takes a second
-  const botRegistery = new BotRegistry();
-  await botRegistery.connect();
+  // Initialize database connection
+  await userManagementDb.connect();
 
-  const bots = await botRegistery.readBots();
+  try {
+    // NOTE: This takes a second
+    const botRegistry = new BotRegistry();
+    const bots = await botRegistry.readBots();
 
-  for (let bot of bots) {
-    try {
-      strategy = new PerpStrategy({
-        bot_id: String(bot.id),
-        walletPrivkey: bot.walletPrivateKey,
-        token: bot.token,
-        basePositionSize: bot.positionSize,
-        leverage: bot.leverage,
-        signalHorizonMin: policy.signalHorizonMin,
-        keepStrategyHorizonMin: policy.keepStrategyHorizonMin,
-        baseAsset: "USDC",
-      });
-      console.log(
-        `Bot ID: ${bot.id}, Exchange: ${bot.exchange}, Token: ${bot.token}, Size: ${bot.positionSize}, Leverage: ${bot.leverage}`
-      );
-      await strategy.execute()
-    } catch (e) {
-      console.error(`Error executing strategy for bot ID ${bot.id}:`, e);
+    for (let bot of bots) {
+      try {
+        strategy = new PerpStrategy({
+          bot_id: String(bot.id),
+          walletPrivkey: bot.walletPrivateKey,
+          token: bot.token,
+          basePositionSize: bot.positionSize,
+          leverage: bot.leverage,
+          signalHorizonMin: policy.signalHorizonMin,
+          keepStrategyHorizonMin: policy.keepStrategyHorizonMin,
+          baseAsset: "USDC",
+        });
+        console.log(
+          `Bot ID: ${bot.id}, Exchange: ${bot.exchange}, Token: ${bot.token}, Size: ${bot.positionSize}, Leverage: ${bot.leverage}`
+        );
+        await strategy.execute()
+      } catch (e) {
+        console.error(`Error executing strategy for bot ID ${bot.id}:`, e);
+      }
     }
+  } finally {
+    // Clean up connection
+    await userManagementDb.disconnect();
   }
-
-  await botRegistery.disconnect();
 
   console.log(
     `Task completed in ${

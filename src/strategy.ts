@@ -1,6 +1,7 @@
 import { Monitoring } from "./db";
 import { GMX } from "./gmx";
 import { Xtreamly } from "./xtreamly";
+import { monitoringDb } from "./database_interface";
 // const { privateKeyToAccount } = require('viem/accounts');
 import { privateKeyToAddress } from "viem/accounts";
 
@@ -56,7 +57,7 @@ export class PerpStrategy {
         this.monitoring = new Monitoring()
         const usdDivisor = 10n ** 30n;
         try {
-            await this.monitoring.connect()
+            await monitoringDb.connect()
             await this.monitoring.insertEvent(this.bot_id, 'execution', {})
             const signals = await this.xtreamly.getSignals();
 
@@ -277,7 +278,7 @@ export class PerpStrategy {
             this.monitoring.insertEvent(this.bot_id, 'error', { error: e })
         }
         finally {
-            await this.monitoring.disconnect()
+            await monitoringDb.disconnect()
         }
     }
 }
