@@ -1,57 +1,9 @@
-import { Client } from 'pg';
-import dotenv from 'dotenv';
 import { Bot } from './models';
-import { secretManager, SecretManagerClient } from './secret_manager';
+import { secretManager } from './secret_manager';
+import { monitoringDb, userManagementDb } from './database_interface';
 
-dotenv.config();
-
-export class DB {
-    protected client: Client;
-
-    constructor(
-        host: string,
-        user: string,
-        password: string,
-        name: string,
-    ) {
-        this.client = new Client({
-            host: host,
-            user: user,
-            password: password,
-            database: name,
-            ssl: {
-                rejectUnauthorized: false,
-            },
-            connectionTimeoutMillis: 5000,
-        });
-    }
-
-    async connect() {
-        try {
-            await this.client.connect();
-        } catch (e) {
-            console.error("Failed to connect to the database:", e);
-        }
-    }
-
-    async disconnect() {
-        await this.client.end();
-    }
-
-}
-
-export class Monitoring extends DB {
-
-    constructor() {
-        const { DB_HOST, DB_USER, DB_PASSWORD, MONITORING_DB_NAME } = process.env;
-
-        if (!DB_HOST || !DB_USER || !DB_PASSWORD || !MONITORING_DB_NAME) {
-            throw new Error('Missing database environment variables');
-        }
-
-        super(DB_HOST, DB_USER, DB_PASSWORD, MONITORING_DB_NAME);
-
-    }
+export class Monitoring {
+    /**Monitoring database operations using the shared database interface*/
 
     async insertEvent(bot_id: string, event_name: string, event_data: any) {
         const query = `
@@ -63,28 +15,17 @@ export class Monitoring extends DB {
         const values = [bot_id, event_name, event_data];
 
         try {
-            const result = await this.client.query(query, values);
+            const result = await monitoringDb.execute(query, values);
             return result.rows[0];
         } catch (err) {
             console.error('Error inserting event:', err);
             throw err;
         }
     }
-
 }
 
-export class BotRegistry extends DB {
-
-    constructor() {
-        const { DB_HOST, DB_USER, DB_PASSWORD, TEST_USER_MANAGEMENT_DB_NAME } = process.env;
-
-        if (!DB_HOST || !DB_USER || !DB_PASSWORD || !TEST_USER_MANAGEMENT_DB_NAME) {
-            throw new Error('Missing database environment variables');
-        }
-
-        super(DB_HOST, DB_USER, DB_PASSWORD, TEST_USER_MANAGEMENT_DB_NAME);
-
-    }
+export class BotRegistry {
+    /**Bot registry operations using the shared database interface*/
 
     async readBots(): Promise<Bot[]> {
         const botQuery = `
@@ -105,26 +46,26 @@ export class BotRegistry extends DB {
             WHERE b.is_initialized = TRUE AND b.is_active = TRUE AND b.exchange = 'gmx';
         `;
 
-        const botRes = await this.client.query(botQuery);
+        const result = await userManagementDb.execute(botQuery);
         const bots: Bot[] = [];
 
-        for (const row of botRes.rows) {
-            const privateKey = await secretManager.retrievePrivateKey(row.wallet_id);
+        for (const row of result.rows) {
+            const privateKey = await secretManager.retrievePrivateKey(row[1]); // wallet_id is at index 1
             if (!privateKey) {
-                console.error(`Failed to retrieve private key for wallet ${row.wallet_id}`);
-                throw new Error(`Failed to retrieve private key for wallet ${row.wallet_id}`);
+                console.error(`Failed to retrieve private key for wallet ${row[1]}`);
+                throw new Error(`Failed to retrieve private key for wallet ${row[1]}`);
             }
             const newBot = new Bot(
-                row.bot_id,
-                row.public_key,
+                row[0], // bot_id
+                row[9], // public_key
                 privateKey,
-                row.exchange,
-                row.token,
-                parseFloat(row.size),
-                parseInt(row.leverage),
-                row.is_initialized,
-                row.is_active,
-                row.bot_metadata,
+                row[2], // exchange
+                row[3], // token
+                parseFloat(row[4]), // size
+                parseInt(row[5]), // leverage
+                row[6], // is_initialized
+                row[7], // is_active
+                row[8], // meta_data
             )
             bots.push(newBot)
         }
@@ -134,10 +75,19 @@ export class BotRegistry extends DB {
 }
 
 async function main() {
-    const botRegistery = new BotRegistry()
-    await botRegistery.connect()
-    const activeBots = await botRegistery.readBots()
-    console.log(activeBots)
+    // Initialize database connections
+    await userManagementDb.connect();
+    await monitoringDb.connect();
+    
+    try {
+        const botRegistry = new BotRegistry();
+        const activeBots = await botRegistry.readBots();
+        console.log(activeBots);
+    } finally {
+        // Clean up connections
+        await userManagementDb.disconnect();
+        await monitoringDb.disconnect();
+    }
 }
 
 // main().catch(console.error);
