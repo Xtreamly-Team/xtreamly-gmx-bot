@@ -45,6 +45,11 @@ const swaggerSpec = swaggerJSDoc({
 
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(spec));
 
+// Health check endpoint
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "healthy", timestamp: new Date().toISOString() });
+});
+
 app.listen(port, "0.0.0.0", () => {
   console.log(`Server running at port ${port}`);
 });
