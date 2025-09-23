@@ -10,7 +10,7 @@ export class Xtreamly {
     }
 
     async getSignals() {
-        const res = await fetch(`${this.baseUrl}/signal`, {
+        const res = await fetch(`${this.baseUrl}/api/v1/signals/latest?limit=1`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
