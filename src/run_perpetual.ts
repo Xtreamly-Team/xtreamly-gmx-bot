@@ -13,7 +13,11 @@ export async function runPerpetualStrategy() {
   const policy = new Policy();
 
   // Initialize database connection
-  await userManagementDb.connect();
+  try {
+    await userManagementDb.connect();
+  } catch (e) {
+    console.error(e)
+  }
 
   try {
     // NOTE: This takes a second
@@ -46,8 +50,7 @@ export async function runPerpetualStrategy() {
   }
 
   console.log(
-    `Task completed in ${
-      (new Date().getTime() - _start.getTime()) / 1000
+    `Task completed in ${(new Date().getTime() - _start.getTime()) / 1000
     } seconds`
   );
 }

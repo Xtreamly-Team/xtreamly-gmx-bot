@@ -57,7 +57,11 @@ export class PerpStrategy {
         this.monitoring = new Monitoring()
         const usdDivisor = 10n ** 30n;
         try {
-            await monitoringDb.connect()
+            try {
+                await monitoringDb.connect()
+            } catch (e) {
+                console.error(e)
+            }
             await this.monitoring.insertEvent(this.bot_id, 'execution', {})
             const signals = await this.xtreamly.getSignals();
 
