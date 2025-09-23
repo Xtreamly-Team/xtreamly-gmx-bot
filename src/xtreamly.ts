@@ -10,7 +10,7 @@ export class Xtreamly {
     }
 
     async getSignals() {
-        const res = await fetch(`${this.baseUrl}/api/v1/signals/latest?limit=1`, {
+        const res = await fetch(`${this.baseUrl}/api/v1/signals/latest?limit=3`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -20,13 +20,14 @@ export class Xtreamly {
             throw new Error(`Error fetching signals: ${res.status} ${res.statusText}`);
         }
         const resObj = await res.json()
-        const signals: Signal[] = JSON.parse(resObj).map((signal: any) => ({
-            symbol: signal.symbol,
-            long: signal.signal_long,
-            short: signal.signal_short,
-            horizon: signal.horizon,
-        }));
-        return signals
+        console.log(`Raw signal res obj: ${resObj}`)
+        // const signals: Signal[] = JSON.parse(resObj).map((signal: any) => ({
+        //     symbol: signal.symbol,
+        //     long: signal.signal_long,
+        //     short: signal.signal_short,
+        //     horizon: signal.horizon,
+        // }));
+        return resObj
     }
 }
 
