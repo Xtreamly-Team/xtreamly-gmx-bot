@@ -8,6 +8,26 @@ const app = express();
 app.use(express.json());
 const port = parseInt(process.env.PORT || "3000", 10);
 
+app.post("/run-strategy", async (req, res) => {
+  try {
+    await runPerpetualStrategy();
+    res.json({ status: "success", message: "Strategy run initiated." });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.get("/health", (req, res) => {
+  res
+    .status(200)
+    .json({ status: "healthy", timestamp: new Date().toISOString() });
+});
+
+app.listen(port, "0.0.0.0", () => {
+  console.log(`Server running at port ${port}`);
+});
+
 // Swagger definition
 const swaggerSpec = swaggerJSDoc({
   definition: {
@@ -33,22 +53,3 @@ const swaggerSpec = swaggerJSDoc({
 
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-app.post("/run-strategy", async (req, res) => {
-  try {
-    await runPerpetualStrategy();
-    res.json({ status: "success", message: "Strategy run initiated." });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-});
-
-app.get("/health", (req, res) => {
-  res
-    .status(200)
-    .json({ status: "healthy", timestamp: new Date().toISOString() });
-});
-
-app.listen(port, "0.0.0.0", () => {
-  console.log(`Server running at port ${port}`);
-});

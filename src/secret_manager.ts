@@ -19,10 +19,13 @@ export class SecretManagerClient {
 
         try {
             console.log("Initializing Secret Manager Client...")
-            console.log(process.cwd());
-            this.client = new SecretManagerServiceClient({
-                keyFilename: "xtreamly-ai-21e3d3e65c99.json"
-            });
+            if (IS_PRODUCTION) {
+                this.client = new SecretManagerServiceClient({
+                    keyFilename: "xtreamly-ai-21e3d3e65c99.json"
+                });
+            } else {
+                this.client = new SecretManagerServiceClient();
+            }
             this.projectId = projectId || this.getDefaultProjectIdSync();
             console.info(
                 `SecretManagerClient initialized for project: ${this.projectId}`

@@ -6,7 +6,7 @@ require("dotenv").config();
 async function main() {
   // Initialize database connection
   await monitoringDb.connect();
-  
+
   try {
     const monitoring = new Monitoring();
     await monitoring.insertEvent("bot_123", "test_event", {
@@ -18,5 +18,3 @@ async function main() {
     await monitoringDb.disconnect();
   }
 }
-
-main();
