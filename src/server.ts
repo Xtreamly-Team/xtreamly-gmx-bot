@@ -10,6 +10,7 @@ const port = parseInt(process.env.PORT || "3000", 10);
 
 app.post("/run-strategy", async (req, res) => {
   try {
+    console.info("Run strategy called")
     await runPerpetualStrategy();
     res.json({ status: "success", message: "Strategy run initiated." });
   } catch (err) {
@@ -24,9 +25,7 @@ app.get("/health", (req, res) => {
     .json({ status: "healthy", timestamp: new Date().toISOString() });
 });
 
-app.listen(port, "0.0.0.0", () => {
-  console.log(`Server running at port ${port}`);
-});
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Swagger definition
 const swaggerSpec = swaggerJSDoc({
@@ -51,5 +50,6 @@ const swaggerSpec = swaggerJSDoc({
   apis: [__filename],
 });
 
-app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-
+app.listen(port, "0.0.0.0", () => {
+  console.log(`Server running at port ${port}`);
+});
