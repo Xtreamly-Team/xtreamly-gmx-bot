@@ -25,8 +25,6 @@ app.get("/health", (req, res) => {
     .json({ status: "healthy", timestamp: new Date().toISOString() });
 });
 
-app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-
 // Swagger definition
 const swaggerSpec = swaggerJSDoc({
   definition: {
@@ -49,6 +47,9 @@ const swaggerSpec = swaggerJSDoc({
   },
   apis: [__filename],
 });
+
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 
 app.listen(port, "0.0.0.0", () => {
   console.log(`Server running at port ${port}`);
