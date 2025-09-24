@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import { parseInt } from 'lodash';
 
 dotenv.config();
 
@@ -16,6 +17,17 @@ export const DEFAULT_POSITION_SIZE = parseFloat(process.env.DEFAULT_POSITION_SIZ
 
 // API Configuration
 export const XSTREAMLY_API_URL = process.env.XSTREAMLY_API_URL || 'https://api.xtreamly.io';
+
+export const YIELD_GENERATION_URL = process.env.YIELD_GENERATION_URL
+
+export function getYieldGenerationUrl(): string {
+    if (!YIELD_GENERATION_URL) {
+        throw new Error('YIELD_GENERATION_URL is not set');
+    }
+    return YIELD_GENERATION_URL;
+}
+
+export const MIN_WALLET_FOR_YIELD = parseInt(process.env.MIN_WALLET_FOR_YIELD || "2000")
 
 export function getDatabaseUrl(): string {
     /**Get the database URL based on environment*/
