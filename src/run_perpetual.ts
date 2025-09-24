@@ -24,8 +24,10 @@ export async function runPerpetualStrategy() {
     // NOTE: This takes a second
     const botRegistry = new BotRegistry();
     const bots = await botRegistry.readBots();
+    console.log(`Found ${bots.length} active bots`);
 
     for (let bot of bots) {
+      console.log(bot)
       try {
         strategy = new PerpStrategy({
           bot_id: String(bot.id),
