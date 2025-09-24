@@ -10,7 +10,7 @@ const port = parseInt(process.env.PORT || "3000", 10);
 
 app.post("/run-strategy", async (req, res) => {
   try {
-    console.info("Run strategy called")
+    console.info("Run strategy called - updated")
     await runPerpetualStrategy();
     res.json({ status: "success", message: "Strategy run initiated." });
   } catch (err) {
