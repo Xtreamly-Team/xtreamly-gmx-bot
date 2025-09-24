@@ -1,10 +1,6 @@
 import { Monitoring } from "./db";
 import { GMX } from "./gmx";
 import { Xtreamly } from "./xtreamly";
-import { monitoringDb } from "./database_interface";
-// const { privateKeyToAccount } = require('viem/accounts');
-import { privateKeyToAddress } from "viem/accounts";
-
 
 export class PerpStrategy {
     private walletPrivkey: string;
