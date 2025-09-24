@@ -14,8 +14,8 @@ export async function runPerpetualStrategy() {
 
   // Initialize database connection
   try {
-    await userManagementDb.connect();
-    await monitoringDb.connect();
+    await userManagementDb.reconnect();
+    await monitoringDb.reconnect();
   } catch (e) {
     console.error(e)
   }

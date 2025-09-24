@@ -41,6 +41,22 @@ export class DatabaseInterface {
         }
     }
 
+    async reconnect(): Promise<void> {
+        try {
+            await this.disconnect();
+            console.log('Disconnected before connecting to PostgreSQL database');
+        } finally {
+            this.client = new Client({
+                connectionString: this.databaseUrl,
+                ssl: {
+                    rejectUnauthorized: false,
+                },
+                connectionTimeoutMillis: 5000,
+            });
+            await this.connect()
+        }
+    }
+
     async disconnect(): Promise<void> {
         await this.pool.end();
     }
