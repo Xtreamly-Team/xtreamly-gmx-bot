@@ -13,11 +13,11 @@ export async function runPerpetualStrategy() {
   const policy = new Policy();
 
   // Initialize database connection
-  try {
-    await userManagementDb.connect();
-  } catch (e) {
-    console.error(e)
-  }
+  // try {
+  //   await userManagementDb.connect();
+  // } catch (e) {
+  //   console.error(e)
+  // }
 
   try {
     // NOTE: This takes a second
@@ -46,7 +46,7 @@ export async function runPerpetualStrategy() {
     }
   } finally {
     // Clean up connection
-    await userManagementDb.disconnect();
+    // await userManagementDb.disconnect();
   }
 
   console.log(
