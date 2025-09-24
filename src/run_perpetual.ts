@@ -8,7 +8,7 @@ let strategy: PerpStrategy;
 
 export async function runPerpetualStrategy() {
   const _start = new Date();
-  console.log("Running task every minute:", new Date().toISOString());
+  console.log("Running strategy at: ", new Date().toISOString());
 
   const policy = new Policy();
 
