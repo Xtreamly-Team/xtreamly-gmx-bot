@@ -29,8 +29,6 @@ export class Xtreamly {
             throw new Error(`Error fetching signals: ${res.status} ${res.statusText}`);
         }
         const resObj = await res.json()
-        console.log(`Raw signal res obj: ${resObj}`)
-        console.log(`Raw single signal: ${resObj[0]}`)
         const signals: Signal[] = resObj.map((s) => {
             return {
                 symbol: s.symbol,
@@ -41,12 +39,6 @@ export class Xtreamly {
                 take_profit: s.take_profit,
             }
         })
-        // const signals: Signal[] = JSON.parse(resObj).map((signal: any) => ({
-        //     symbol: signal.symbol,
-        //     long: signal.signal_long,
-        //     short: signal.signal_short,
-        //     horizon: signal.horizon,
-        // }));
         return signals
     }
 }

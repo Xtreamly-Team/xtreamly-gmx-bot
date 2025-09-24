@@ -53,16 +53,11 @@ export class PerpStrategy {
         this.monitoring = new Monitoring()
         const usdDivisor = 10n ** 30n;
         try {
-            // try {
-            //     await monitoringDb.connect()
-            // } catch (e) {
-            //     console.error(e)
-            // }
             await this.monitoring.insertEvent(this.bot_id, 'execution', {})
             const signals = await this.xtreamly.getSignals();
 
             for (let signal of signals) {
-                console.log(`Signal: ${signal.symbol}, Long: ${signal.long}, Short: ${signal.short}, Horizon: ${signal.horizon} minutes`);
+                console.log(`Signal: ${signal.symbol}, Long: ${signal.long}, Short: ${signal.short}, Horizon: ${signal.horizon} minutes, ${signal.stop_loss} Stop loss, ${signal.take_profit}`);
             }
             const signal = signals.filter(signal => signal.symbol === this.token)[0];
             await this.monitoring.insertEvent(this.bot_id, 'signal_received', signal)
@@ -277,8 +272,5 @@ export class PerpStrategy {
             console.error("Error during strategy execution:", e);
             this.monitoring.insertEvent(this.bot_id, 'error', { error: e })
         }
-        // finally {
-        //     await monitoringDb.disconnect()
-        // }
     }
 }
