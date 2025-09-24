@@ -27,7 +27,6 @@ export async function runPerpetualStrategy() {
     console.log(`Found ${bots.length} active bots`);
 
     for (let bot of bots) {
-      console.log(bot)
       try {
         strategy = new PerpStrategy({
           bot_id: String(bot.id),
