@@ -28,7 +28,6 @@ export class PerpStrategy {
         keepStrategyHorizonMin?: number;
         baseAsset?: string;
     }) {
-        console.warn(params)
         this.bot_id = params.bot_id;
         this.walletPrivkey = params.walletPrivkey;
         this.token = params.token;
@@ -45,7 +44,6 @@ export class PerpStrategy {
         this.gmx = new GMX(this.walletPrivkey);
         this.xtreamly = new Xtreamly()
         this.monitoring = new Monitoring()
-        // this.bot_id = `perp_gmx_${this.token.toUpperCase()}_${privateKeyToAddress(this.walletPrivkey)}_${formatTimestamp(Date.now())}_${Math.floor(Math.random() * 100) + 1}`
 
     }
 
