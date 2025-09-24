@@ -74,21 +74,21 @@ export class BotRegistry {
     }
 }
 
-async function main() {
-    // Initialize database connections
-    await userManagementDb.connect();
-    await monitoringDb.connect();
-    
-    try {
-        const botRegistry = new BotRegistry();
-        const activeBots = await botRegistry.readBots();
-        console.log(activeBots);
-    } finally {
-        // Clean up connections
-        await userManagementDb.disconnect();
-        await monitoringDb.disconnect();
-    }
-}
-
-// main().catch(console.error);
-
+// async function main() {
+//     // Initialize database connections
+//     await userManagementDb.connect();
+//     await monitoringDb.connect();
+//     
+//     try {
+//         const botRegistry = new BotRegistry();
+//         const activeBots = await botRegistry.readBots();
+//         console.log(activeBots);
+//     } finally {
+//         // Clean up connections
+//         await userManagementDb.disconnect();
+//         await monitoringDb.disconnect();
+//     }
+// }
+//
+// // main().catch(console.error);
+//

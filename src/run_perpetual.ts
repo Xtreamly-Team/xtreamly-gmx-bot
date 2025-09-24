@@ -2,7 +2,7 @@ import cron from "node-cron";
 import { PerpStrategy } from "./strategy";
 import { BotRegistry } from "./db";
 import { Policy } from "./models";
-import { userManagementDb } from "./database_interface";
+import { userManagementDb, monitoringDb } from "./database_interface";
 
 let strategy: PerpStrategy;
 
@@ -13,11 +13,12 @@ export async function runPerpetualStrategy() {
   const policy = new Policy();
 
   // Initialize database connection
-  // try {
-  //   await userManagementDb.connect();
-  // } catch (e) {
-  //   console.error(e)
-  // }
+  try {
+    await userManagementDb.connect();
+    await monitoringDb.connect();
+  } catch (e) {
+    console.error(e)
+  }
 
   try {
     // NOTE: This takes a second
@@ -46,7 +47,8 @@ export async function runPerpetualStrategy() {
     }
   } finally {
     // Clean up connection
-    // await userManagementDb.disconnect();
+    await userManagementDb.disconnect();
+    await monitoringDb.disconnect()
   }
 
   console.log(
