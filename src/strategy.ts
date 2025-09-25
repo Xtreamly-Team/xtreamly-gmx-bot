@@ -83,6 +83,168 @@ export class PerpStrategy {
             const time_since_last_short_signal = currentTime - this.lastReceivedShortSignalTime;
             console.log("Time since last short signal:", time_since_last_short_signal);
 
+            if (positions.length > 0) {
+                const position = positions[0];
+                const entryPrice = position.entryPrice
+                if (position.isLong) {
+                    console.log(`Current long position entry price: ${entryPrice}`)
+                    if (position.markPrice <= (1 - (signal.stop_loss / 100)) * Number(entryPrice)) {
+                        console.log("Long position hit stop loss, closing position")
+                        await this.monitoring.insertEvent(this.bot_id, 'long_position_hit_stop_loss', {
+                            'entryPrice': entryPrice,
+                            'markPrice': position.markPrice,
+                            'stopLossPercent': signal.stop_loss,
+                            'position': {
+                                "side": position.isLong ? 'long' : 'short',
+                                "size": Number(position.sizeInUsd / usdDivisor)
+                            }
+                        })
+                        await this.gmx.closePosition(this.token);
+                        console.log("Adding funds to yield generator")
+                        const publicClient = createPublicClient({
+                            chain: arbitrum,
+                            transport: http(ARB_RPC_URL),
+                        })
+                        console.log("Fetching USDC balance")
+                        let usdcBalance = await publicClient.readContract({
+                            abi: erc20Abi,
+                            // USDC_Address
+                            address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+                            functionName: "balanceOf",
+                            args: [publicClient.account.address],
+                        });
+                        const toDeposit = Number(usdcBalance / 10n ** 6n)
+                        if (toDeposit > MIN_WALLET_FOR_YIELD) {
+                            console.log("To Deposit:", toDeposit)
+                            this.yieldGenerator.deposit(this.walletPrivkey, toDeposit)
+                            await this.monitoring.insertEvent(this.bot_id, 'depositing_to_yield_generator', { usdcBalance: Number(usdcBalance / 10n ** 6n) })
+                            return
+                        } else {
+                            console.log("Not enough USDC to deposit to yield generator, skipping deposit")
+                            await this.monitoring.insertEvent(this.bot_id, 'not_depositing_to_yield_generator', { usdcBalance: Number(usdcBalance / 10n ** 6n) })
+                        }
+                        return
+                    }
+                    else if (position.markPrice >= (1 + (signal.take_profit / 100)) * Number(entryPrice)) {
+                        console.log("Long position hit take profit, closing position")
+                        await this.monitoring.insertEvent(this.bot_id, 'long_position_hit_take_profit', {
+                            'entryPrice': entryPrice,
+                            'markPrice': position.markPrice,
+                            'takeProfitPercent': signal.take_profit,
+                            'position': {
+                                "side": position.isLong ? 'long' : 'short',
+                                "size": Number(position.sizeInUsd / usdDivisor)
+                            }
+                        })
+                        await this.gmx.closePosition(this.token);
+                        console.log("Adding funds to yield generator")
+                        const publicClient = createPublicClient({
+                            chain: arbitrum,
+                            transport: http(ARB_RPC_URL),
+                        })
+                        console.log("Fetching USDC balance")
+                        let usdcBalance = await publicClient.readContract({
+                            abi: erc20Abi,
+                            // USDC_Address
+                            address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+                            functionName: "balanceOf",
+                            args: [publicClient.account.address],
+                        });
+                        const toDeposit = Number(usdcBalance / 10n ** 6n)
+                        if (toDeposit > MIN_WALLET_FOR_YIELD) {
+                            console.log("To Deposit:", toDeposit)
+                            this.yieldGenerator.deposit(this.walletPrivkey, toDeposit)
+                            await this.monitoring.insertEvent(this.bot_id, 'depositing_to_yield_generator', { usdcBalance: Number(usdcBalance / 10n ** 6n) })
+                            return
+                        } else {
+                            console.log("Not enough USDC to deposit to yield generator, skipping deposit")
+                            await this.monitoring.insertEvent(this.bot_id, 'not_depositing_to_yield_generator', { usdcBalance: Number(usdcBalance / 10n ** 6n) })
+                        }
+                        return
+
+                    }
+
+                }
+                else {
+                    console.log(`Current short position entry price: ${entryPrice}`)
+                    if (position.markPrice >= (1 + (signal.stop_loss / 100)) * Number(entryPrice)) {
+                        console.log("Short position hit stop loss, closing position")
+                        await this.monitoring.insertEvent(this.bot_id, 'short_position_hit_stop_loss', {
+                            'entryPrice': entryPrice,
+                            'markPrice': position.markPrice,
+                            'stopLossPercent': signal.stop_loss,
+                            'position': {
+                                "side": position.isLong ? 'long' : 'short',
+                                "size": Number(position.sizeInUsd / usdDivisor)
+                            }
+                        })
+                        await this.gmx.closePosition(this.token);
+                        console.log("Adding funds to yield generator")
+                        const publicClient = createPublicClient({
+                            chain: arbitrum,
+                            transport: http(ARB_RPC_URL),
+                        })
+                        console.log("Fetching USDC balance")
+                        let usdcBalance = await publicClient.readContract({
+                            abi: erc20Abi,
+                            // USDC_Address
+                            address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+                            functionName: "balanceOf",
+                            args: [publicClient.account.address],
+                        });
+                        const toDeposit = Number(usdcBalance / 10n ** 6n)
+                        if (toDeposit > MIN_WALLET_FOR_YIELD) {
+                            console.log("To Deposit:", toDeposit)
+                            this.yieldGenerator.deposit(this.walletPrivkey, toDeposit)
+                            await this.monitoring.insertEvent(this.bot_id, 'depositing_to_yield_generator', { usdcBalance: Number(usdcBalance / 10n ** 6n) })
+                            return
+                        } else {
+                            console.log("Not enough USDC to deposit to yield generator, skipping deposit")
+                            await this.monitoring.insertEvent(this.bot_id, 'not_depositing_to_yield_generator', { usdcBalance: Number(usdcBalance / 10n ** 6n) })
+                        }
+                        return
+                    }
+                    else if (position.markPrice <= (1 - (signal.take_profit / 100)) * Number(entryPrice)) {
+                        console.log("Short position hit take profit, closing position")
+                        await this.monitoring.insertEvent(this.bot_id, 'short_position_hit_take_profit', {
+                            'entryPrice': entryPrice,
+                            'markPrice': position.markPrice,
+                            'takeProfitPercent': signal.take_profit,
+                            'position': {
+                                "side": position.isLong ? 'long' : 'short',
+                                "size": Number(position.sizeInUsd / usdDivisor)
+                            }
+                        })
+                        await this.gmx.closePosition(this.token);
+                        console.log("Adding funds to yield generator")
+                        const publicClient = createPublicClient({
+                            chain: arbitrum,
+                            transport: http(ARB_RPC_URL),
+                        })
+                        console.log("Fetching USDC balance")
+                        let usdcBalance = await publicClient.readContract({
+                            abi: erc20Abi,
+                            // USDC_Address
+                            address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+                            functionName: "balanceOf",
+                            args: [publicClient.account.address],
+                        });
+                        const toDeposit = Number(usdcBalance / 10n ** 6n)
+                        if (toDeposit > MIN_WALLET_FOR_YIELD) {
+                            console.log("To Deposit:", toDeposit)
+                            this.yieldGenerator.deposit(this.walletPrivkey, toDeposit)
+                            await this.monitoring.insertEvent(this.bot_id, 'depositing_to_yield_generator', { usdcBalance: Number(usdcBalance / 10n ** 6n) })
+                            return
+                        } else {
+                            console.log("Not enough USDC to deposit to yield generator, skipping deposit")
+                            await this.monitoring.insertEvent(this.bot_id, 'not_depositing_to_yield_generator', { usdcBalance: Number(usdcBalance / 10n ** 6n) })
+                        }
+                        return
+                    }
+
+                }
+            }
+
             if (signal.long) {
                 console.log(`Long signal received for ${this.token}, at ${currentTime}, last long signal at ${this.lastReceivedLongSignalTime}`);
                 console.log(`Resetting last received long signal time to current time.`);
