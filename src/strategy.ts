@@ -1,6 +1,10 @@
+import { createPublicClient, erc20Abi, http } from "viem";
+import { ARB_RPC_URL, getYieldGenerationUrl, MIN_WALLET_FOR_YIELD } from "./config";
 import { Monitoring } from "./db";
 import { GMX } from "./gmx";
 import { Xtreamly } from "./xtreamly";
+import { YieldGenerator } from "./yield_generation";
+import { arbitrum } from 'viem/chains';
 
 export class PerpStrategy {
     private walletPrivkey: string;
@@ -17,6 +21,7 @@ export class PerpStrategy {
     private xtreamly: Xtreamly
     private monitoring: Monitoring;
     bot_id: string;
+    private yieldGenerator: YieldGenerator;
 
     constructor(params: {
         bot_id: string;
@@ -49,6 +54,7 @@ export class PerpStrategy {
 
     async execute() {
         this.monitoring = new Monitoring()
+        this.yieldGenerator = new YieldGenerator(getYieldGenerationUrl())
         const usdDivisor = 10n ** 30n;
         try {
             await this.monitoring.insertEvent(this.bot_id, 'execution', {})
@@ -118,6 +124,10 @@ export class PerpStrategy {
                     }
                 }
                 else {
+                    console.log(`Withdrawing from yield generator to open long position`)
+                    this.yieldGenerator.withdraw(this.walletPrivkey)
+                    // Sleep for 2 seconds to make sure the withdrawal is processed
+                    await new Promise(r => setTimeout(r, 2000));
                     console.log("Creating a new long position")
                     await this.monitoring.insertEvent(this.bot_id, 'opening_new_position_long', {
                         'basePositionSize': this.basePositionSize,
@@ -172,6 +182,8 @@ export class PerpStrategy {
                         console.log(res)
                     }
                 } else {
+                    console.log(`Withdrawing from yield generator to open short position`)
+                    this.yieldGenerator.withdraw(this.walletPrivkey)
                     console.log("Creating a new short position")
                     await this.monitoring.insertEvent(this.bot_id, 'opening_new_position_short', {
                         'basePositionSize': this.basePositionSize,
@@ -262,6 +274,29 @@ export class PerpStrategy {
                         'lastReceivedShortSignalTime': this.lastReceivedShortSignalTime,
                         'timesinceLastShortSignal': time_since_last_short_signal,
                     })
+                    console.log("Adding funds to yield generator")
+                    const publicClient = createPublicClient({
+                        chain: arbitrum,
+                        transport: http(ARB_RPC_URL),
+                    })
+                    console.log("Fetching USDC balance")
+                    let usdcBalance = await publicClient.readContract({
+                        abi: erc20Abi,
+                        // USDC_Address
+                        address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+                        functionName: "balanceOf",
+                        args: [publicClient.account.address],
+                    });
+                    const toDeposit = Number(usdcBalance / 10n ** 6n)
+                    if (toDeposit > MIN_WALLET_FOR_YIELD) {
+                        console.log("To Deposit:", toDeposit)
+                        this.yieldGenerator.deposit(this.walletPrivkey, toDeposit)
+                        await this.monitoring.insertEvent(this.bot_id, 'depositing_to_yield_generator', { usdcBalance: Number(usdcBalance / 10n ** 6n) })
+                        return
+                    } else {
+                        console.log("Not enough USDC to deposit to yield generator, skipping deposit")
+                        await this.monitoring.insertEvent(this.bot_id, 'not_depositing_to_yield_generator', { usdcBalance: Number(usdcBalance / 10n ** 6n) })
+                    }
                 }
             }
 

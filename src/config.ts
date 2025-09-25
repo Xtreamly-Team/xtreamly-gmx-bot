@@ -27,6 +27,8 @@ export function getYieldGenerationUrl(): string {
     return YIELD_GENERATION_URL;
 }
 
+export const ARB_RPC_URL = process.env.ARB_RPC_URL || 'https://arb1.arbitrum.io/rpc';
+
 export const MIN_WALLET_FOR_YIELD = parseInt(process.env.MIN_WALLET_FOR_YIELD || "2000")
 
 export function getDatabaseUrl(): string {
