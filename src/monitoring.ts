@@ -8,18 +8,15 @@ import logger from './logger';
 const client = new MetricServiceClient();
 const projectId = process.env.GCP_PROJECT_ID;
 const serviceName = process.env.K_SERVICE || 'unknown';
-const revisionName = process.env.K_REVISION || 'unknown';
-const configurationName = process.env.K_CONFIGURATION || 'unknown';
 const location = process.env.GCP_REGION || 'unknown';
 
 const resource = {
-  type: 'cloud_run_revision',
+  type: 'generic_task',
   labels: {
     project_id: projectId,
-    service_name: serviceName,
-    revision_name: revisionName,
-    configuration_name: configurationName,
     location: location,
+    namespace: serviceName,
+    job: serviceName,
   },
 };
 
