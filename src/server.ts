@@ -1,9 +1,11 @@
 import express from "express";
 import * as Sentry from "@sentry/node";
-import { ProfilingIntegration } from "@sentry/profiling-node";
+import { nodeProfilingIntegration } from "@sentry/profiling-node";
 import swaggerUi from "swagger-ui-express";
 import swaggerJSDoc from "swagger-jsdoc";
 import { SENTRY_DSN } from "./config";
+import logger from "./logger";
+import { recordMetric } from "./monitoring";
 
 import { runPerpetualStrategy } from "./run_perpetual.js";
 
@@ -12,11 +14,9 @@ const app = express();
 Sentry.init({
   dsn: SENTRY_DSN,
   integrations: [
-    // enable HTTP calls tracing
-    new Sentry.Integrations.Http({ tracing: true }),
-    // enable Express.js middleware tracing
-    new Sentry.Integrations.Express({ app }),
-    new ProfilingIntegration(),
+    Sentry.httpIntegration(),
+    Sentry.expressIntegration(),
+    nodeProfilingIntegration(),
   ],
   // Performance Monitoring
   tracesSampleRate: 1.0,
@@ -24,13 +24,33 @@ Sentry.init({
   profilesSampleRate: 1.0,
 });
 
-// The request handler must be the first middleware on the app
-app.use(Sentry.Handlers.requestHandler());
-
-// TracingHandler creates a trace for every incoming request
-app.use(Sentry.Handlers.tracingHandler());
-
 app.use(express.json());
+
+// Monitoring Middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    const { method, path } = req;
+    const { statusCode } = res;
+    
+    recordMetric('api/request_latency_ms', duration, {
+      http_method: method,
+      path: path,
+      status_code: String(statusCode),
+    });
+
+    if (statusCode >= 400) {
+      recordMetric('api/error_count', 1, {
+        http_method: method,
+        path: path,
+        status_code: String(statusCode),
+      });
+    }
+  });
+  next();
+});
+
 const port = parseInt(process.env.PORT || "3000", 10);
 
 app.post("/run-strategy", async (req, res) => {
@@ -117,9 +137,6 @@ const swaggerSpec = swaggerJSDoc({
 
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// The error handler must be registered before any other error middleware and after all controllers
-app.use(Sentry.Handlers.errorHandler());
-
 // Optional fallthrough error handler
 app.use(function onError(err, req, res, next) {
   // The error id is attached to `res.sentry` to be returned
@@ -129,5 +146,5 @@ app.use(function onError(err, req, res, next) {
 });
 
 app.listen(port, "0.0.0.0", () => {
-  console.log(`Server running at port ${port}`);
+  logger.info(`Server running at port ${port}`);
 });

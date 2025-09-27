@@ -25,6 +25,11 @@ export class Monitoring {
     }
 }
 
+export async function getActiveBots(): Promise<Bot[]> {
+    const botRegistry = new BotRegistry();
+    return await botRegistry.readBots();
+}
+
 export class BotRegistry {
     /**Bot registry operations using the shared database interface*/
 

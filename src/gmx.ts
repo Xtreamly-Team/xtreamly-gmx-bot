@@ -170,7 +170,7 @@ export class GMX {
     }
 
 
-    async getOpenPositions() {
+    async getPositions() {
         const openPositions = await this.sdk.positions.getPositionsInfo({
             marketsInfoData: this.marketsInfoData,
             tokensData: this.tokensData,
@@ -220,7 +220,7 @@ export class GMX {
     }
 
     async closePosition(market: 'ETH' | 'BTC' | 'SOL', allowedSlippageBps: number = 10000) {
-        const marketPositions = await this.getOpenPositions();
+        const marketPositions = await this.getPositions();
         if (!marketPositions[market] || marketPositions[market].length == 0) {
             console.warn(`No open positions for market ${market} to close`);
             return;
@@ -242,4 +242,8 @@ export class GMX {
         return this.sdk;
     }
 }
+
+const gmx = new GMX(process.env.GMX_PRIVATE_KEY || '');
+
+export { gmx };
 

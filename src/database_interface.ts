@@ -41,24 +41,27 @@ export class DatabaseInterface {
         }
     }
 
-    async reconnect(): Promise<void> {
-        try {
-            await this.disconnect();
-            console.log('Disconnected before connecting to PostgreSQL database');
-        } finally {
-            this.client = new Client({
-                connectionString: this.databaseUrl,
-                ssl: {
-                    rejectUnauthorized: false,
-                },
-                connectionTimeoutMillis: 5000,
-            });
-            await this.connect()
-        }
-    }
-
     async disconnect(): Promise<void> {
         await this.pool.end();
+    }
+
+    async reconnect(): Promise<void> {
+        console.log('Forcing database reconnection...');
+        await this.disconnect();
+        // Re-initialize the pool
+        this.pool = new Pool({
+            connectionString: this.databaseUrl,
+            ssl: {
+                rejectUnauthorized: false,
+            },
+            min: 1,
+            max: 3,
+            idleTimeoutMillis: 300000,
+            connectionTimeoutMillis: 5000,
+            keepAlive: true,
+            keepAliveInitialDelayMillis: 0,
+        });
+        await this.connect();
     }
 
     async execute(query: string, params: any[] = []): Promise<any> {
@@ -110,12 +113,6 @@ export class DatabaseInterface {
             console.error('Database health check failed:', error);
             return false;
         }
-    }
-
-    async reconnect(): Promise<void> {
-        console.log('Forcing database reconnection...');
-        await this.disconnect();
-        await this.connect();
     }
 }
 

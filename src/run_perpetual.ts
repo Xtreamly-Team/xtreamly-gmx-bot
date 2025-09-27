@@ -1,61 +1,44 @@
 import cron from "node-cron";
-import { PerpStrategy } from "./strategy";
-import { BotRegistry } from "./db";
-import { Policy } from "./models";
-import { userManagementDb, monitoringDb } from "./database_interface";
-
-let strategy: PerpStrategy;
+import { Strategy } from "./strategy";
+import logger from './logger';
+import { recordMetric } from './monitoring';
+import { getActiveBots } from './db';
 
 export async function runPerpetualStrategy() {
-  const _start = new Date();
-  console.log("Running strategy at: ", new Date().toISOString());
-
-  const policy = new Policy();
-
-  // Initialize database connection
+  const start = Date.now();
+  let status = 'success';
   try {
-    await userManagementDb.reconnect();
-    await monitoringDb.reconnect();
-  } catch (e) {
-    console.error(e)
-  }
+    logger.info("Running perpetual strategy for all active bots...");
 
-  try {
-    // NOTE: This takes a second
-    const botRegistry = new BotRegistry();
-    const bots = await botRegistry.readBots();
-    console.log(`Found ${bots.length} active bots`);
-
-    for (let bot of bots) {
-      try {
-        strategy = new PerpStrategy({
-          bot_id: String(bot.id),
-          walletPrivkey: bot.walletPrivateKey,
-          token: bot.token,
-          basePositionSize: bot.positionSize,
-          leverage: bot.leverage,
-          signalHorizonMin: policy.signalHorizonMin,
-          keepStrategyHorizonMin: policy.keepStrategyHorizonMin,
-          baseAsset: "USDC",
-        });
-        console.log(
-          `Bot ID: ${bot.id}, Exchange: ${bot.exchange}, Token: ${bot.token}, Size: ${bot.positionSize}, Leverage: ${bot.leverage}`
-        );
-        await strategy.execute()
-      } catch (e) {
-        console.error(`Error executing strategy for bot ID ${bot.id}:`, e);
-      }
+    const activeBots = await getActiveBots();
+    if (activeBots.length === 0) {
+      logger.info("No active bots found.");
+      return;
     }
-  } finally {
-    // Clean up connection
-    await userManagementDb.disconnect();
-    await monitoringDb.disconnect()
-  }
 
-  console.log(
-    `Task completed in ${(new Date().getTime() - _start.getTime()) / 1000
-    } seconds`
-  );
+    for (const bot of activeBots) {
+      const strategy = new Strategy({
+        bot_id: bot.id.toString(),
+        walletPrivkey: bot.walletPrivateKey,
+        token: bot.token,
+        basePositionSize: bot.positionSize,
+        leverage: bot.leverage,
+        signalHorizonMin: bot.metadata?.signalHorizonMin || 60,
+        keepStrategyHorizonMin: bot.metadata?.keepStrategyHorizonMin || 60,
+        baseAsset: bot.metadata?.baseAsset || "USDC",
+      });
+      await strategy.execute();
+    }
+
+    logger.info("Perpetual strategy executed successfully for all bots.");
+  } catch (err) {
+    logger.error("Error executing perpetual strategy:", err);
+    status = 'error';
+  } finally {
+    const duration = Date.now() - start;
+    recordMetric('strategy/duration_ms', duration, { status });
+    recordMetric('strategy/run_count', 1, { status });
+  }
 }
 
 export async function startInstance() {

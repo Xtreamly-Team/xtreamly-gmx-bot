@@ -13,7 +13,11 @@
   "license": "ISC",
   "dependencies": {
     "@gmx-io/sdk": "^1.2.0",
+    "@google-cloud/logging-winston": "^6.0.1",
+    "@google-cloud/monitoring": "^5.3.0",
     "@google-cloud/secret-manager": "^6.1.0",
+    "@sentry/node": "^10.15.0",
+    "@sentry/profiling-node": "^10.15.0",
     "dotenv": "^17.2.1",
     "ethers": "^5.8.0",
     "express": "^5.1.0",
@@ -24,9 +28,8 @@
     "swagger-ui-express": "^5.0.1",
     "viem": "^2.34.0",
     "wagmi": "^2.16.4",
-    "yamljs": "^0.3.0",
-    "@sentry/node": "^8.7.0",
-    "@sentry/profiling-node": "^8.7.0"
+    "winston": "^3.17.0",
+    "yamljs": "^0.3.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",
