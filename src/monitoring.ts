@@ -13,13 +13,13 @@ const configurationName = process.env.K_CONFIGURATION || 'unknown';
 const location = process.env.GCP_REGION || 'unknown';
 
 const resource = {
-  type: 'cloud_run_revision',
+  type: 'generic_task',
   labels: {
     project_id: projectId,
-    service_name: serviceName,
-    revision_name: revisionName,
-    configuration_name: configurationName,
     location: location,
+    namespace: serviceName,
+    job: serviceName,
+    task_id: revisionName
   },
 };
 
@@ -57,7 +57,7 @@ async function createTimeSeries(metricType: string, value: number, labels?: { [k
     await client.createTimeSeries(request);
     logger.debug(`Recorded metric '${metricType}' with value ${value}`);
   } catch (err) {
-    logger.error({ err }, `Failed to record metric '${metricType}'`);
+    logger.error(err, `Failed to record metric '${metricType}'`);
   }
 }
 
