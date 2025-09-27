@@ -1,4 +1,5 @@
 import { SecretManagerServiceClient } from "@google-cloud/secret-manager";
+import logger from "./logger";
 
 const SECRET_MANAGER_AVAILABLE = true; // toggle based on runtime checks
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
@@ -9,7 +10,7 @@ export class SecretManagerClient {
 
     constructor(projectId?: string) {
         if (!SECRET_MANAGER_AVAILABLE) {
-            console.warn(
+            logger.warn(
                 "Google Cloud Secret Manager not available. Private key storage will be disabled."
             );
             this.client = null;
@@ -18,7 +19,7 @@ export class SecretManagerClient {
         }
 
         try {
-            console.log("Initializing Secret Manager Client...")
+            logger.info("Initializing Secret Manager Client...");
             if (IS_PRODUCTION) {
                 this.client = new SecretManagerServiceClient();
             } else {
@@ -27,11 +28,11 @@ export class SecretManagerClient {
                 });
             }
             this.projectId = projectId || this.getDefaultProjectIdSync();
-            console.info(
+            logger.info(
                 `SecretManagerClient initialized for project: ${this.projectId}`
             );
         } catch (e) {
-            console.warn(
+            logger.warn(
                 `Failed to initialize Secret Manager: ${e}. Private key storage will be disabled.`
             );
             this.client = null;
@@ -49,7 +50,7 @@ export class SecretManagerClient {
                 "Project ID must be provided or set in GOOGLE_CLOUD_PROJECT environment variable"
             );
         } else {
-            console.info("Using default project ID for development");
+            logger.info("Using default project ID for development");
             return "development-project";
         }
     }
@@ -60,7 +61,7 @@ export class SecretManagerClient {
 
     async storePrivateKey(walletId: string, privateKey: string): Promise<boolean> {
         if (!SECRET_MANAGER_AVAILABLE || !this.client || !this.projectId) {
-            console.warn("Secret Manager not available. Cannot store private key.");
+            logger.warn("Secret Manager not available. Cannot store private key.");
             return false;
         }
 
@@ -73,9 +74,9 @@ export class SecretManagerClient {
             // Check if secret exists
             try {
                 await this.client.getSecret({ name: fullName });
-                console.info(`Secret ${secretName} already exists, updating...`);
+                logger.info(`Secret ${secretName} already exists, updating...`);
             } catch {
-                console.info(`Creating new secret: ${secretName}`);
+                logger.info(`Creating new secret: ${secretName}`);
                 await this.client.createSecret({
                     parent,
                     secretId: secretName,
@@ -89,12 +90,12 @@ export class SecretManagerClient {
                 payload: { data: Buffer.from(privateKey, "utf8") },
             });
 
-            console.info(
+            logger.info(
                 `Successfully stored private key for wallet ${walletId} in version ${version.name}`
             );
             return true;
         } catch (e) {
-            console.error(
+            logger.error(
                 `Failed to store private key for wallet ${walletId}: ${e}`
             );
             return false;
@@ -103,7 +104,7 @@ export class SecretManagerClient {
 
     async retrievePrivateKey(walletId: string): Promise<string | null> {
         if (!SECRET_MANAGER_AVAILABLE || !this.client || !this.projectId) {
-            console.warn("Secret Manager not available. Cannot retrieve private key.");
+            logger.warn("Secret Manager not available. Cannot retrieve private key.");
             return null;
         }
 
@@ -115,7 +116,7 @@ export class SecretManagerClient {
             const privateKey = response.payload?.data?.toString("utf8") || null;
 
             if (privateKey) {
-                console.info(
+                logger.info(
                     `Successfully retrieved private key for wallet ${walletId}`
                 );
             }
@@ -123,10 +124,10 @@ export class SecretManagerClient {
         } catch (e: any) {
             if (e.code === 5) {
                 // NotFound
-                console.warn(`Private key not found for wallet ${walletId}`);
+                logger.warn(`Private key not found for wallet ${walletId}`);
                 return null;
             }
-            console.error(
+            logger.error(
                 `Failed to retrieve private key for wallet ${walletId}: ${e}`
             );
             return null;
@@ -135,7 +136,7 @@ export class SecretManagerClient {
 
     async deletePrivateKey(walletId: string): Promise<boolean> {
         if (!SECRET_MANAGER_AVAILABLE || !this.client || !this.projectId) {
-            console.warn("Secret Manager not available. Cannot delete private key.");
+            logger.warn("Secret Manager not available. Cannot delete private key.");
             return false;
         }
 
@@ -144,16 +145,16 @@ export class SecretManagerClient {
             const name = `projects/${this.projectId}/secrets/${secretName}`;
 
             await this.client.deleteSecret({ name });
-            console.info(`Successfully deleted private key for wallet ${walletId}`);
+            logger.info(`Successfully deleted private key for wallet ${walletId}`);
             return true;
         } catch (e: any) {
             if (e.code === 5) {
-                console.warn(
+                logger.warn(
                     `Private key not found for wallet ${walletId} (already deleted)`
                 );
                 return true;
             }
-            console.error(
+            logger.error(
                 `Failed to delete private key for wallet ${walletId}: ${e}`
             );
             return false;
@@ -162,7 +163,7 @@ export class SecretManagerClient {
 
     async privateKeyExists(walletId: string): Promise<boolean> {
         if (!SECRET_MANAGER_AVAILABLE || !this.client || !this.projectId) {
-            console.warn(
+            logger.warn(
                 "Secret Manager not available. Cannot check if private key exists."
             );
             return false;
@@ -178,7 +179,7 @@ export class SecretManagerClient {
             if (e.code === 5) {
                 return false;
             }
-            console.error(
+            logger.error(
                 `Error checking if private key exists for wallet ${walletId}: ${e}`
             );
             return false;

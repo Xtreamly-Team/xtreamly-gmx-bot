@@ -1,6 +1,7 @@
 import { Monitoring } from "./db";
 import { GMX } from "./gmx";
 import { Xtreamly } from "./xtreamly";
+import logger from "./logger";
 
 export class PerpStrategy {
     private walletPrivkey: string;
@@ -55,13 +56,13 @@ export class PerpStrategy {
             const signals = await this.xtreamly.getSignals();
 
             for (let signal of signals) {
-                console.log(`Signal: ${signal.symbol}, Long: ${signal.long}, Short: ${signal.short}, Horizon: ${signal.horizon} minutes, ${signal.stop_loss} Stop loss, ${signal.take_profit}`);
+                logger.info(`Signal: ${signal.symbol}, Long: ${signal.long}, Short: ${signal.short}, Horizon: ${signal.horizon} minutes, ${signal.stop_loss} Stop loss, ${signal.take_profit}`);
             }
             const signal = signals.filter(signal => signal.symbol === this.token)[0];
             await this.monitoring.insertEvent(this.bot_id, 'signal_received', signal)
 
             if (signal.long && signal.short) {
-                console.error("Received both long and short signals, cannot proceed with strategy.");
+                logger.error("Received both long and short signals, cannot proceed with strategy.");
                 await this.monitoring.insertEvent(this.bot_id, 'signal_confusing', signal)
                 return
             }
@@ -70,22 +71,22 @@ export class PerpStrategy {
             const positions = allPositions[this.token] ? allPositions[this.token] : [];
 
             const currentTime = Math.floor(Date.now() / 1000);
-            console.log(currentTime)
+            logger.info(currentTime);
 
             const time_since_last_long_signal = currentTime - this.lastReceivedLongSignalTime;
-            console.log("Time since last long signal:", time_since_last_long_signal);
+            logger.info(`Time since last long signal: ${time_since_last_long_signal}`);
             const time_since_last_short_signal = currentTime - this.lastReceivedShortSignalTime;
-            console.log("Time since last short signal:", time_since_last_short_signal);
+            logger.info(`Time since last short signal: ${time_since_last_short_signal}`);
 
             if (signal.long) {
-                console.log(`Long signal received for ${this.token}, at ${currentTime}, last long signal at ${this.lastReceivedLongSignalTime}`);
-                console.log(`Resetting last received long signal time to current time.`);
+                logger.info(`Long signal received for ${this.token}, at ${currentTime}, last long signal at ${this.lastReceivedLongSignalTime}`);
+                logger.info(`Resetting last received long signal time to current time.`);
                 this.lastReceivedLongSignalTime = Math.floor(Date.now() / 1000);
                 await this.monitoring.insertEvent(this.bot_id, 'signal_received_long', signal)
                 if (positions.length > 0) {
                     const position = positions[0];
                     if (position.isLong) {
-                        console.log("Keeping existing long position open")
+                        logger.info("Keeping existing long position open");
                         await this.monitoring.insertEvent(this.bot_id, 'keeping_position_long',
                             {
                                 "side": position.isLong ? 'long' : 'short',
@@ -93,14 +94,14 @@ export class PerpStrategy {
                             }
                         )
                     } else {
-                        console.log("Flipping short position to long")
+                        logger.info("Flipping short position to long");
                         await this.monitoring.insertEvent(this.bot_id, 'flipping_position_short_to_long',
                             {
                                 "side": position.isLong ? 'long' : 'short',
                                 "size": Number(position.sizeInUsd / usdDivisor)
                             }
                         )
-                        console.log("closing short position")
+                        logger.info("closing short position");
                         await this.gmx.closePosition(this.token);
                         await this.monitoring.insertEvent(this.bot_id, 'closed_position_short',
                             {
@@ -108,9 +109,9 @@ export class PerpStrategy {
                                 "size": Number(position.sizeInUsd / usdDivisor)
                             }
                         )
-                        console.log("Opening long position")
+                        logger.info("Opening long position");
                         const res = await this.gmx.openPosition(this.token, 'long', this.basePositionSize, this.leverage);
-                        console.log(res)
+                        logger.info(res);
                         await this.monitoring.insertEvent(this.bot_id, 'opened_position_long', {
                             'basePositionSize': this.basePositionSize,
                             'leverage': this.leverage,
@@ -118,7 +119,7 @@ export class PerpStrategy {
                     }
                 }
                 else {
-                    console.log("Creating a new long position")
+                    logger.info("Creating a new long position");
                     await this.monitoring.insertEvent(this.bot_id, 'opening_new_position_long', {
                         'basePositionSize': this.basePositionSize,
                         'leverage': this.leverage,
@@ -128,11 +129,11 @@ export class PerpStrategy {
                         'basePositionSize': this.basePositionSize,
                         'leverage': this.leverage,
                     })
-                    console.log(res)
+                    logger.info(res);
                 }
             } else if (signal.short) {
-                console.log("Short signal received for", this.token, "at", currentTime, "last short signal at", this.lastReceivedShortSignalTime);
-                console.log("Resetting last received short signal time to current time.");
+                logger.info(`Short signal received for ${this.token} at ${currentTime}, last short signal at ${this.lastReceivedShortSignalTime}`);
+                logger.info("Resetting last received short signal time to current time.");
                 this.lastReceivedShortSignalTime = Math.floor(Date.now() / 1000);
                 await this.monitoring.insertEvent(this.bot_id, 'signal_received_short', signal)
                 if (
@@ -140,7 +141,7 @@ export class PerpStrategy {
                 ) {
                     const position = positions[0];
                     if (!position.isLong) {
-                        console.log("Keeping existing short position open")
+                        logger.info("Keeping existing short position open");
                         await this.monitoring.insertEvent(this.bot_id, 'keeping_position_short',
                             {
                                 "side": position.isLong ? 'long' : 'short',
@@ -148,14 +149,14 @@ export class PerpStrategy {
                             }
                         )
                     } else {
-                        console.log("Flipping long position to short")
+                        logger.info("Flipping long position to short");
                         await this.monitoring.insertEvent(this.bot_id, 'flipping_position_long_to_short',
                             {
                                 "side": position.isLong ? 'long' : 'short',
                                 "size": Number(position.sizeInUsd / usdDivisor)
                             }
                         )
-                        console.log("closing long position")
+                        logger.info("closing long position");
                         await this.gmx.closePosition(this.token);
                         await this.monitoring.insertEvent(this.bot_id, 'closed_position_long',
                             {
@@ -163,16 +164,16 @@ export class PerpStrategy {
                                 "size": Number(position.sizeInUsd / usdDivisor)
                             }
                         )
-                        console.log("Opening short position")
+                        logger.info("Opening short position");
                         const res = await this.gmx.openPosition(this.token, 'short', this.basePositionSize, this.leverage);
                         await this.monitoring.insertEvent(this.bot_id, 'opened_position_short', {
                             'basePositionSize': this.basePositionSize,
                             'leverage': this.leverage,
                         })
-                        console.log(res)
+                        logger.info(res);
                     }
                 } else {
-                    console.log("Creating a new short position")
+                    logger.info("Creating a new short position");
                     await this.monitoring.insertEvent(this.bot_id, 'opening_new_position_short', {
                         'basePositionSize': this.basePositionSize,
                         'leverage': this.leverage,
@@ -182,20 +183,20 @@ export class PerpStrategy {
                         'basePositionSize': this.basePositionSize,
                         'leverage': this.leverage,
                     })
-                    console.log(res)
+                    logger.info(res);
                 }
             } else {
-                console.log("No signal received for", this.token, "at", currentTime);
+                logger.info(`No signal received for ${this.token} at ${currentTime}`);
                 await this.monitoring.insertEvent(this.bot_id, 'signal_received_none', signal)
                 if (
                     positions.length > 0
                 ) {
                     const position = positions[0];
                     if (position.isLong) {
-                        console.log("Checking whether to keep long position open")
+                        logger.info("Checking whether to keep long position open");
                         if (time_since_last_long_signal > this.keepStrategyHorizonMin * 60) {
-                            console.log("Haven't received long signal for a while, closing long position")
-                            console.log("Closing long position due to no recent long signal")
+                            logger.info("Haven't received long signal for a while, closing long position");
+                            logger.info("Closing long position due to no recent long signal");
                             await this.monitoring.insertEvent(this.bot_id, 'closing_position_long_no_recent_signal', {
                                 'lastReceivedLongSignalTime': this.lastReceivedLongSignalTime,
                                 'timesinceLastLongSignal': time_since_last_long_signal,
@@ -211,7 +212,7 @@ export class PerpStrategy {
                                 'size': Number(position.sizeInUsd / usdDivisor)
                             })
                         } else {
-                            console.log("Keeping long position open")
+                            logger.info("Keeping long position open");
                             await this.monitoring.insertEvent(this.bot_id, 'keeping_position_long', {
                                 'lastReceivedLongSignalTime': this.lastReceivedLongSignalTime,
                                 'timesinceLastLongSignal': time_since_last_long_signal,
@@ -223,10 +224,10 @@ export class PerpStrategy {
                             })
                         }
                     } else {
-                        console.log("Checking whether to keep short position open")
+                        logger.info("Checking whether to keep short position open");
                         if (time_since_last_short_signal > this.keepStrategyHorizonMin * 60) {
-                            console.log("Haven't received short signal for a while, closing short position")
-                            console.log("Closing short position due to no recent short signal")
+                            logger.info("Haven't received short signal for a while, closing short position");
+                            logger.info("Closing short position due to no recent short signal");
                             await this.monitoring.insertEvent(this.bot_id, 'closing_position_short_no_recent_signal', {
                                 'lastReceivedShortSignalTime': this.lastReceivedShortSignalTime,
                                 'timesinceLastShortSignal': time_since_last_short_signal,
@@ -242,7 +243,7 @@ export class PerpStrategy {
                                 'size': Number(position.sizeInUsd / usdDivisor)
                             })
                         } else {
-                            console.log("Keeping short position open")
+                            logger.info("Keeping short position open");
                             await this.monitoring.insertEvent(this.bot_id, 'keeping_position_short', {
                                 'lastReceivedShortSignalTime': this.lastReceivedShortSignalTime,
                                 'timesinceLastShortSignal': time_since_last_short_signal,
@@ -255,7 +256,7 @@ export class PerpStrategy {
                         }
                     }
                 } else {
-                    console.log("No open positions for", this.token, "at", currentTime);
+                    logger.info(`No open positions for ${this.token} at ${currentTime}`);
                     await this.monitoring.insertEvent(this.bot_id, 'no_open_positions_and_no_signal', {
                         'lastReceivedLongSignalTime': this.lastReceivedLongSignalTime,
                         'timesinceLastLongSignal': time_since_last_long_signal,
@@ -267,7 +268,7 @@ export class PerpStrategy {
 
         }
         catch (e) {
-            console.error("Error during strategy execution:", e);
+            logger.error(e, "Error during strategy execution:");
             this.monitoring.insertEvent(this.bot_id, 'error', { error: e })
         }
     }

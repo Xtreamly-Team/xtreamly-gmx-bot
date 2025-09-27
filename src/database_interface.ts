@@ -5,10 +5,12 @@
 
 import { Pool } from 'pg';
 import { getDatabaseUrl, getUserManagementDatabaseUrl } from './config';
+import logger from './logger';
 
 export class DatabaseInterface {
     private pool: Pool;
     private databaseUrl: string;
+    private ended = false;
 
     constructor(databaseUrl: string) {
         this.databaseUrl = databaseUrl;
@@ -34,19 +36,23 @@ export class DatabaseInterface {
             const client = await this.pool.connect();
             await client.query('SELECT 1');
             client.release();
-            console.log('Connected to PostgreSQL database and created connection pool');
+            logger.info('Connected to PostgreSQL database and created connection pool');
         } catch (error) {
-            console.error('Failed to connect to the database:', error);
+            logger.info(error, 'Failed to connect to the database');
             throw error;
         }
     }
 
     async disconnect(): Promise<void> {
+        if (this.ended) {
+            return;
+        }
+        this.ended = true;
         await this.pool.end();
     }
 
     async reconnect(): Promise<void> {
-        console.log('Forcing database reconnection...');
+        logger.info('Forcing database reconnection...');
         await this.disconnect();
         // Re-initialize the pool
         this.pool = new Pool({
@@ -61,6 +67,7 @@ export class DatabaseInterface {
             keepAlive: true,
             keepAliveInitialDelayMillis: 0,
         });
+        this.ended = false;
         await this.connect();
     }
 
@@ -79,9 +86,7 @@ export class DatabaseInterface {
                 return result.rowCount || 0;
             }
         } catch (error) {
-            console.error('Error executing query:', error);
-            console.error('Query:', query);
-            console.error('Params:', params);
+            logger.info(error, 'Error executing query', { query, params });
             throw error;
         } finally {
             client.release();
@@ -94,9 +99,7 @@ export class DatabaseInterface {
             const result = await client.query(query, params);
             return result.rows[0] || null;
         } catch (error) {
-            console.error('Error executing query:', error);
-            console.error('Query:', query);
-            console.error('Params:', params);
+            logger.info(error, 'Error executing query', { query, params });
             throw error;
         } finally {
             client.release();
@@ -110,7 +113,7 @@ export class DatabaseInterface {
             client.release();
             return result.rows[0][0] === 1;
         } catch (error) {
-            console.error('Database health check failed:', error);
+            logger.info(error, 'Database health check failed');
             return false;
         }
     }

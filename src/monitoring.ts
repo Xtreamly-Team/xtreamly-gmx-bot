@@ -2,6 +2,7 @@
  * GCP Monitoring and Metrics Module for Cloud Run (Node.js)
  */
 import { MetricServiceClient } from '@google-cloud/monitoring';
+import logger from './logger';
 
 // --- Cloud Run Specific Configuration ---
 const client = new MetricServiceClient();
@@ -24,7 +25,7 @@ const resource = {
 
 async function createTimeSeries(metricType: string, value: number, labels?: { [key: string]: string }) {
   if (!projectId) {
-    console.warn('GCP_PROJECT_ID not set. Custom metrics disabled.');
+    logger.warn('GCP_PROJECT_ID not set. Custom metrics disabled.');
     return;
   }
 
@@ -54,9 +55,9 @@ async function createTimeSeries(metricType: string, value: number, labels?: { [k
       timeSeries: [timeSeriesData],
     };
     await client.createTimeSeries(request);
-    console.debug(`Recorded metric '${metricType}' with value ${value}`);
+    logger.debug(`Recorded metric '${metricType}' with value ${value}`);
   } catch (err) {
-    console.error(`Failed to record metric '${metricType}':`, err);
+    logger.error({ err }, `Failed to record metric '${metricType}'`);
   }
 }
 

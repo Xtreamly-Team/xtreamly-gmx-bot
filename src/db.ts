@@ -1,6 +1,7 @@
 import { Bot } from './models';
 import { secretManager } from './secret_manager';
 import { monitoringDb, userManagementDb } from './database_interface';
+import logger from './logger';
 
 export class Monitoring {
     /**Monitoring database operations using the shared database interface*/
@@ -19,7 +20,7 @@ export class Monitoring {
             const result = await monitoringDb.execute(query, values);
             // return result.rows[0];
         } catch (err) {
-            console.error('Error inserting event:', err);
+            logger.error(err, 'Error inserting event');
             throw err;
         }
     }
@@ -58,7 +59,7 @@ export class BotRegistry {
         for (const row of result.rows) {
             const privateKey = await secretManager.retrievePrivateKey(row[1]); // wallet_id is at index 1
             if (!privateKey) {
-                console.error(`Failed to retrieve private key for wallet ${row[1]}`);
+                logger.error(`Failed to retrieve private key for wallet ${row[1]}`);
                 throw new Error(`Failed to retrieve private key for wallet ${row[1]}`);
             }
             const newBot = new Bot(

@@ -3,12 +3,13 @@ import { PerpStrategy } from "./strategy";
 import { BotRegistry } from "./db";
 import { Policy } from "./models";
 import { userManagementDb, monitoringDb } from "./database_interface";
+import logger from "./logger";
 
 let strategy: PerpStrategy;
 
 export async function runPerpetualStrategy() {
   const _start = new Date();
-  console.log("Running strategy at: ", new Date().toISOString());
+  logger.info(`Running strategy at: ${new Date().toISOString()}`);
 
   const policy = new Policy();
 
@@ -17,14 +18,14 @@ export async function runPerpetualStrategy() {
     await userManagementDb.reconnect();
     await monitoringDb.reconnect();
   } catch (e) {
-    console.error(e)
+    logger.error(e);
   }
 
   try {
     // NOTE: This takes a second
     const botRegistry = new BotRegistry();
     const bots = await botRegistry.readBots();
-    console.log(`Found ${bots.length} active bots`);
+    logger.info(`Found ${bots.length} active bots`);
 
     for (let bot of bots) {
       try {
@@ -38,12 +39,12 @@ export async function runPerpetualStrategy() {
           keepStrategyHorizonMin: policy.keepStrategyHorizonMin,
           baseAsset: "USDC",
         });
-        console.log(
+        logger.info(
           `Bot ID: ${bot.id}, Exchange: ${bot.exchange}, Token: ${bot.token}, Size: ${bot.positionSize}, Leverage: ${bot.leverage}`
         );
         await strategy.execute()
       } catch (e) {
-        console.error(`Error executing strategy for bot ID ${bot.id}:`, e);
+        logger.error(`Error executing strategy for bot ID ${bot.id}:`, e);
       }
     }
   } finally {
@@ -52,7 +53,7 @@ export async function runPerpetualStrategy() {
     await monitoringDb.disconnect()
   }
 
-  console.log(
+  logger.info(
     `Task completed in ${(new Date().getTime() - _start.getTime()) / 1000
     } seconds`
   );
@@ -67,7 +68,7 @@ export async function startInstance() {
       }
     }
 
-    console.log("Starting perpetual bot session...");
+    logger.info("Starting perpetual bot session...");
 
     if (process.env.NODE_ENV !== "production") {
       cron.schedule("* * * * *", async () => {

@@ -78,11 +78,11 @@ const port = parseInt(process.env.PORT || "3000", 10);
  */
 app.post("/run-strategy", async (req, res) => {
   try {
-    console.info("Run strategy called - updated")
+    logger.info("Run strategy called - updated");
     await runPerpetualStrategy();
     res.json({ status: "success", message: "Strategy run initiated." });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
@@ -134,19 +134,19 @@ app.get("/health", async (req, res) => {
     const status = dbHealthy ? "healthy" : "unhealthy";
     
     if (!dbHealthy) {
-      console.warn("Database health check failed");
+      logger.warn("Database health check failed");
       // Try to reconnect if needed
       try {
         if (!monitoringHealthy) {
-          console.log("Attempting to reconnect monitoring database...");
+          logger.info("Attempting to reconnect monitoring database...");
           await monitoringDb.reconnect();
         }
         if (!userManagementHealthy) {
-          console.log("Attempting to reconnect user management database...");
+          logger.info("Attempting to reconnect user management database...");
           await userManagementDb.reconnect();
         }
       } catch (error) {
-        console.error("Database reconnection failed:", error);
+        logger.error(error, "Database reconnection failed:");
       }
     }
 
@@ -160,7 +160,7 @@ app.get("/health", async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Health check failed:", error);
+    logger.error(error, "Health check failed:");
     res.status(503).json({
       status: "unhealthy",
       version: "1.0.0",

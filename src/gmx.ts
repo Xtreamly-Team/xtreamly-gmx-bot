@@ -16,6 +16,7 @@ import type { WalletClient, PublicClient } from 'viem';
 
 import { erc20Abi } from "viem";
 import { getDecreasePositionAmounts } from './decrease';
+import logger from './logger';
 
 
 export class GMX {
@@ -68,7 +69,7 @@ export class GMX {
 
         const { marketsInfoData, tokensData } = await this.sdk.markets.getMarketsInfo();
         if (!tokensData || !marketsInfoData) {
-            console.error("Error fetching tokens data or markets info")
+            logger.error("Error fetching tokens data or markets info");
             return
         }
         this.marketsInfoData = marketsInfoData;
@@ -99,10 +100,10 @@ export class GMX {
         });
 
         if (balance < amount) {
-            console.error("Insufficient balance for USDC, needed:", (amount / 1_000_000n).toString(), "but got:", (balance / 1_000_000n).toString());
+            logger.error(`Insufficient balance for USDC, needed: ${(amount / 1_000_000n).toString()} but got: ${(balance / 1_000_000n).toString()}`);
             return false;
         } else {
-            console.log("Sufficient balance for USDC, needed: ", (amount / 1_000_000n).toString(), " got:", (balance / 1_000_000n).toString());
+            logger.info(`Sufficient balance for USDC, needed: ${(amount / 1_000_000n).toString()} got: ${(balance / 1_000_000n).toString()}`);
         }
 
         const allowance = await this.sdk.publicClient.readContract({
@@ -115,7 +116,7 @@ export class GMX {
             return true;
         }
         else {
-            console.log("Allowance insufficient. Allowence: ", (allowance / 1_000_000n).toString(), "Needed:", (amount / 1_000_000n).toString());
+            logger.info(`Allowance insufficient. Allowance: ${(allowance / 1_000_000n).toString()} Needed: ${(amount / 1_000_000n).toString()}`);
             const res = await this.sdk.walletClient.writeContract({
                 abi: erc20Abi,
                 address: this.tokenAddresses['USDC'] as `0x${string}`,
@@ -125,8 +126,8 @@ export class GMX {
                 account: this.sdk.walletClient.account || null,
                 chain: null,
             })
-            console.log(res)
-            console.log("Increased allowance to", (amount / 1_000_000n).toString());
+            logger.info(res);
+            logger.info(`Increased allowance to ${(amount / 1_000_000n).toString()}`);
             return true
         }
     }
@@ -139,12 +140,12 @@ export class GMX {
         const payAmount = Math.floor(amount / leverage);
 
         if (!this.marketAddresses[market]) {
-            console.error(`Market ${market} not initialized`);
+            logger.error(`Market ${market} not initialized`);
             return;
         }
-        console.log(this.marketAddresses[market], "Market address for", market);
+        logger.info(`${this.marketAddresses[market]} Market address for ${market}`);
         if (side == 'long') {
-            console.log("Opening long")
+            logger.info("Opening long");
             const res = await this.sdk.orders.long({
                 payAmount: BigInt(payAmount) * 10n ** 6n, // IN USDC
                 marketAddress: this.marketAddresses[market],
@@ -222,11 +223,11 @@ export class GMX {
     async closePosition(market: 'ETH' | 'BTC' | 'SOL', allowedSlippageBps: number = 10000) {
         const marketPositions = await this.getOpenPositions();
         if (!marketPositions[market] || marketPositions[market].length == 0) {
-            console.warn(`No open positions for market ${market} to close`);
+            logger.warn(`No open positions for market ${market} to close`);
             return;
         }
         if (marketPositions[market].length > 1) {
-            console.warn(`Multiple open positions for market ${market}, closing the first one`);
+            logger.warn(`Multiple open positions for market ${market}, closing the first one`);
         }
         const position: PositionInfo = marketPositions[market][0];
         await this._closePosition(position, 'USDC', allowedSlippageBps)
