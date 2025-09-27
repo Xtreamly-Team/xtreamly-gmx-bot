@@ -17,6 +17,9 @@ export const DEFAULT_POSITION_SIZE = parseFloat(process.env.DEFAULT_POSITION_SIZ
 // API Configuration
 export const XSTREAMLY_API_URL = process.env.XSTREAMLY_API_URL || 'https://api.xtreamly.io';
 
+// Sentry
+export const SENTRY_DSN = process.env.SENTRY_DSN || '';
+
 export function getDatabaseUrl(): string {
     /**Get the database URL based on environment*/
     // Use direct PostgreSQL connection
