@@ -1,10 +1,8 @@
 import { Monitoring } from "./db";
 import { GMX } from "./gmx";
 import { Xtreamly } from "./xtreamly";
-import { Bot } from "./models";
-import { PositionInfo } from "@gmx-io/sdk/build/types/src/types/positions";
 
-export class Strategy {
+export class PerpStrategy {
     private walletPrivkey: string;
     private token: 'ETH' | 'SOL' | 'BTC';
     private baseAsset: string;
@@ -68,7 +66,7 @@ export class Strategy {
                 return
             }
 
-            const allPositions = await this.gmx.getPositions();
+            const allPositions = await this.gmx.getOpenPositions();
             const positions = allPositions[this.token] ? allPositions[this.token] : [];
 
             const currentTime = Math.floor(Date.now() / 1000);
