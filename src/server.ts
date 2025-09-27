@@ -19,10 +19,52 @@ app.post("/run-strategy", async (req, res) => {
   }
 });
 
-app.get("/health", (req, res) => {
-  res
-    .status(200)
-    .json({ status: "healthy", timestamp: new Date().toISOString() });
+app.get("/health", async (req, res) => {
+  try {
+    const { monitoringDb, userManagementDb } = await import('./database_interface');
+    
+    // Check database health
+    const monitoringHealthy = await monitoringDb.isHealthy();
+    const userManagementHealthy = await userManagementDb.isHealthy();
+    
+    const dbHealthy = monitoringHealthy && userManagementHealthy;
+    const status = dbHealthy ? "healthy" : "unhealthy";
+    
+    if (!dbHealthy) {
+      console.warn("Database health check failed");
+      // Try to reconnect if needed
+      try {
+        if (!monitoringHealthy) {
+          console.log("Attempting to reconnect monitoring database...");
+          await monitoringDb.reconnect();
+        }
+        if (!userManagementHealthy) {
+          console.log("Attempting to reconnect user management database...");
+          await userManagementDb.reconnect();
+        }
+      } catch (error) {
+        console.error("Database reconnection failed:", error);
+      }
+    }
+
+    res.status(dbHealthy ? 200 : 503).json({
+      status,
+      version: "1.0.0",
+      timestamp: new Date().toISOString(),
+      databases: {
+        monitoring: monitoringHealthy ? "healthy" : "unhealthy",
+        user_management: userManagementHealthy ? "healthy" : "unhealthy"
+      }
+    });
+  } catch (error) {
+    console.error("Health check failed:", error);
+    res.status(503).json({
+      status: "unhealthy",
+      version: "1.0.0",
+      timestamp: new Date().toISOString(),
+      error: "Health check failed"
+    });
+  }
 });
 
 // Swagger definition
