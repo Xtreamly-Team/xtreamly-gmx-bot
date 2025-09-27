@@ -127,28 +127,33 @@ app.get("/health", async (req, res) => {
     const { monitoringDb, userManagementDb } = await import('./database_interface');
     
     // Check database health
-    const monitoringHealthy = await monitoringDb.isHealthy();
-    const userManagementHealthy = await userManagementDb.isHealthy();
+    let monitoringHealthy = await monitoringDb.isHealthy();
+    let userManagementHealthy = await userManagementDb.isHealthy();
+    
+    if (!monitoringHealthy) {
+      logger.warn("Monitoring database health check failed. Attempting to reconnect...");
+      try {
+        await monitoringDb.reconnect();
+        monitoringHealthy = await monitoringDb.isHealthy(); // Re-check
+      } catch (error) {
+        logger.error(error, "Monitoring database reconnection failed:");
+        monitoringHealthy = false;
+      }
+    }
+
+    if (!userManagementHealthy) {
+      logger.warn("User management database health check failed. Attempting to reconnect...");
+      try {
+        await userManagementDb.reconnect();
+        userManagementHealthy = await userManagementDb.isHealthy(); // Re-check
+      } catch (error) {
+        logger.error(error, "User management database reconnection failed:");
+        userManagementHealthy = false;
+      }
+    }
     
     const dbHealthy = monitoringHealthy && userManagementHealthy;
     const status = dbHealthy ? "healthy" : "unhealthy";
-    
-    if (!dbHealthy) {
-      logger.warn("Database health check failed");
-      // Try to reconnect if needed
-      try {
-        if (!monitoringHealthy) {
-          logger.info("Attempting to reconnect monitoring database...");
-          await monitoringDb.reconnect();
-        }
-        if (!userManagementHealthy) {
-          logger.info("Attempting to reconnect user management database...");
-          await userManagementDb.reconnect();
-        }
-      } catch (error) {
-        logger.error(error, "Database reconnection failed:");
-      }
-    }
 
     res.status(dbHealthy ? 200 : 503).json({
       status,

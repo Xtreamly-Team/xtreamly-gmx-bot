@@ -107,6 +107,9 @@ export class DatabaseInterface {
     }
 
     async isHealthy(): Promise<boolean> {
+        if (this.ended) {
+            return false;
+        }
         try {
             const client = await this.pool.connect();
             const result = await client.query('SELECT 1');
