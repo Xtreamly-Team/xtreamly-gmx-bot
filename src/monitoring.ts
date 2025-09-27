@@ -8,6 +8,7 @@ import logger from './logger';
 const client = new MetricServiceClient();
 const projectId = process.env.GCP_PROJECT_ID;
 const serviceName = process.env.K_SERVICE || 'unknown';
+const revisionName = process.env.K_REVISION || 'unknown';
 const location = process.env.GCP_REGION || 'unknown';
 
 const resource = {
@@ -17,6 +18,7 @@ const resource = {
     location: location,
     namespace: serviceName,
     job: serviceName,
+    task_id: revisionName,
   },
 };
 
