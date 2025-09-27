@@ -13,13 +13,13 @@ const configurationName = process.env.K_CONFIGURATION || 'unknown';
 const location = process.env.GCP_REGION || 'unknown';
 
 const resource = {
-  type: 'generic_task',
+  type: 'cloud_run_revision',
   labels: {
     project_id: projectId,
+    service_name: serviceName,
+    revision_name: revisionName,
+    configuration_name: configurationName,
     location: location,
-    namespace: serviceName,
-    job: serviceName,
-    task_id: revisionName
   },
 };
 
