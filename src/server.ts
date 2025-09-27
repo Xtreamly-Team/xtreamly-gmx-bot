@@ -53,6 +53,29 @@ app.use((req, res, next) => {
 
 const port = parseInt(process.env.PORT || "3000", 10);
 
+/**
+ * @swagger
+ * /run-strategy:
+ *   post:
+ *     summary: Manually trigger the perpetual trading strategy
+ *     description: Initiates a run of the perpetual trading strategy for all active bots. This is an asynchronous operation.
+ *     responses:
+ *       200:
+ *         description: Strategy run has been successfully initiated.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: Strategy run initiated.
+ *       500:
+ *         description: Internal Server Error if the strategy fails to start.
+ */
 app.post("/run-strategy", async (req, res) => {
   try {
     console.info("Run strategy called - updated")
@@ -64,6 +87,41 @@ app.post("/run-strategy", async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /health:
+ *   get:
+ *     summary: Health check endpoint
+ *     description: Checks the health of the service, including database connections.
+ *     responses:
+ *       200:
+ *         description: The service is healthy.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: healthy
+ *                 version:
+ *                   type: string
+ *                   example: 1.0.0
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *                 databases:
+ *                   type: object
+ *                   properties:
+ *                     monitoring:
+ *                       type: string
+ *                       example: healthy
+ *                     user_management:
+ *                       type: string
+ *                       example: healthy
+ *       503:
+ *         description: The service is unhealthy, likely due to a database connection issue.
+ */
 app.get("/health", async (req, res) => {
   try {
     const { monitoringDb, userManagementDb } = await import('./database_interface');
