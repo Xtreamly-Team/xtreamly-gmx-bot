@@ -107,16 +107,14 @@ export class DatabaseInterface {
     }
 
     async isHealthy(): Promise<boolean> {
-        if (this.ended) {
+        if (!this.pool) {
             return false;
         }
         try {
-            const client = await this.pool.connect();
-            const result = await client.query('SELECT 1');
-            client.release();
-            return result.rows[0][0] === 1;
+            const result = await this.pool.query('SELECT 1');
+            return result !== null;
         } catch (error) {
-            logger.info(error, 'Database health check failed');
+            logger.error(error, `Health check failed for ${this.databaseUrl}`);
             return false;
         }
     }
