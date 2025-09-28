@@ -7,6 +7,7 @@ import { SENTRY_DSN } from "./config";
 import logger from "./logger";
 
 import { runPerpetualStrategy } from "./run_perpetual.js";
+import { monitoringDb, userManagementDb } from "./database_interface.js";
 
 const app = express();
 
@@ -192,6 +193,17 @@ app.use(function onError(err, req, res, next) {
   res.end(res.sentry + "\n");
 });
 
-app.listen(port, "0.0.0.0", () => {
-  logger.info(`Server running at port ${port}`);
-});
+async function startServer() {
+  try {
+    await monitoringDb.connect();
+    await userManagementDb.connect();
+    app.listen(port, "0.0.0.0", () => {
+      logger.info(`Server running at port ${port}`);
+    });
+  } catch (error) {
+    logger.error(error, "Failed to start server");
+    process.exit(1);
+  }
+}
+
+startServer();

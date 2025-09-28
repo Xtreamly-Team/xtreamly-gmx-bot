@@ -23,10 +23,27 @@ export class DatabaseInterface {
             min: 1,  // Minimum connections
             max: 3,  // Maximum connections (Cloud Run friendly)
             idleTimeoutMillis: 300000,  // 5 minutes
-            connectionTimeoutMillis: 5000,
+            connectionTimeoutMillis: 10000,
             // Keep-alive settings
             keepAlive: true,
             keepAliveInitialDelayMillis: 0,
+        });
+
+        this.pool.on('error', (err, client) => {
+            logger.error(err.message, 'Unexpected error on idle client');
+            // process.exit(-1);
+        });
+
+        this.pool.on('connect', (client) => {
+            logger.info('Database client connected');
+        });
+
+        this.pool.on('acquire', (client) => {
+            logger.info('Database client acquired');
+        });
+
+        this.pool.on('remove', (client) => {
+            logger.info('Database client removed');
         });
     }
 

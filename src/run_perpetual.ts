@@ -13,14 +13,6 @@ export async function runPerpetualStrategy() {
 
   const policy = new Policy();
 
-  // Initialize database connection
-  try {
-    await userManagementDb.reconnect();
-    await monitoringDb.reconnect();
-  } catch (e) {
-    logger.error(e);
-  }
-
   try {
     // NOTE: This takes a second
     const botRegistry = new BotRegistry();
@@ -42,21 +34,14 @@ export async function runPerpetualStrategy() {
         logger.info(
           `Bot ID: ${bot.id}, Exchange: ${bot.exchange}, Token: ${bot.token}, Size: ${bot.positionSize}, Leverage: ${bot.leverage}`
         );
-        await strategy.execute()
+        await strategy.execute();
       } catch (e) {
         logger.error(`Error executing strategy for bot ID ${bot.id}:`, e);
       }
     }
-  } finally {
-    // Clean up connection
-    await userManagementDb.disconnect();
-    await monitoringDb.disconnect()
+  } catch (e) {
+    logger.error(e);
   }
-
-  logger.info(
-    `Task completed in ${(new Date().getTime() - _start.getTime()) / 1000
-    } seconds`
-  );
 }
 
 export async function startInstance() {
