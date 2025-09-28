@@ -20,8 +20,8 @@ const logger = winston.createLogger({
     // In development, log to the console
     environment === 'production' ? loggingWinston : new winston.transports.Console({
       format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple()
+        winston.format.timestamp(),
+        winston.format.json()
       )
     }),
   ],
