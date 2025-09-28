@@ -5,7 +5,6 @@ import swaggerUi from "swagger-ui-express";
 import swaggerJSDoc from "swagger-jsdoc";
 import { SENTRY_DSN } from "./config";
 import logger from "./logger";
-import { recordMetric } from "./monitoring";
 
 import { runPerpetualStrategy } from "./run_perpetual.js";
 
@@ -31,22 +30,7 @@ app.use((req, res, next) => {
   const start = Date.now();
   res.on('finish', () => {
     const duration = Date.now() - start;
-    const { method, path } = req;
-    const { statusCode } = res;
-    
-    recordMetric('api/request_latency_ms', duration, {
-      http_method: method,
-      path: path,
-      status_code: String(statusCode),
-    });
-
-    if (statusCode >= 400) {
-      recordMetric('api/error_count', 1, {
-        http_method: method,
-        path: path,
-        status_code: String(statusCode),
-      });
-    }
+    logger.info(`Request finished: ${req.method} ${req.path} - ${res.statusCode} - ${duration}ms`);
   });
   next();
 });
