@@ -108,7 +108,12 @@ export class PerpStrategy {
         this.yieldGenerator = new YieldGenerator(getYieldGenerationUrl())
         const usdDivisor = 10n ** 30n;
         try {
+
             await this.monitoring.insertEvent(this.bot_id, 'execution', {})
+
+            console.log("Initializing GMX")
+            await this.gmx.initialzeMarkets()
+
             const signals = await this.xtreamly.getSignals(this.token);
 
             const signal = signals[signals.length - 1];
