@@ -55,7 +55,7 @@ export class PerpStrategy {
         this.gmx = new GMX(this.walletPrivkey);
         this.xtreamly = new Xtreamly()
         this.monitoring = new Monitoring()
-        console.log(`PerpSignalStrategy GMX initialized fro ${this.walletAddress} with symbol ${this.token}`)
+        console.log(`PerpSignalStrategy GMX initialized for ${this.walletAddress} with symbol ${this.token}`)
 
     }
 
@@ -112,8 +112,8 @@ export class PerpStrategy {
             const signal = signals[signals.length - 1];
             const firstSignal = signals[0];
             console.log(`Fetched ${signals.length} signals`);
-            console.log(`First signal: ${firstSignal.symbol}, Long: ${firstSignal.long}, Short: ${firstSignal.short}, Horizon: ${firstSignal.horizon} minutes, ${firstSignal.stop_loss} Stop loss, ${firstSignal.take_profit}`);
-            console.log(`Last signal: ${signal.symbol}, Long: ${signal.long}, Short: ${signal.short}, Horizon: ${signal.horizon} minutes, ${signal.stop_loss} Stop loss, ${signal.take_profit}`);
+            console.log(`First signal: ${firstSignal.symbol}, Long: ${firstSignal.long}, Short: ${firstSignal.short}, Horizon: ${firstSignal.horizon} minutes, ${firstSignal.stop_loss} Stop loss, ${firstSignal.take_profit} at ${firstSignal.prediction_time}`);
+            console.log(`Last signal: ${signal.symbol}, Long: ${signal.long}, Short: ${signal.short}, Horizon: ${signal.horizon} minutes, ${signal.stop_loss} Stop loss, ${signal.take_profit} at ${signal.prediction_time}`);
 
             for (const _signal of signals) {
                 if (_signal.long) {
@@ -122,6 +122,8 @@ export class PerpStrategy {
                     this.lastReceivedShortSignalTime = Math.floor(new Date(_signal.prediction_time).getTime() / 1000);
                 }
             }
+
+            console.log(`Last received long signal time: ${this.lastReceivedLongSignalTime}, last received short signal time: ${this.lastReceivedShortSignalTime}`)
 
             await this.monitoring.insertEvent(this.bot_id, 'signal_received', signal)
 
