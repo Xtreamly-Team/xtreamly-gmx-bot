@@ -20,7 +20,7 @@ export class Xtreamly {
     }
 
     async getSignals(token: string) {
-        const url = `${this.baseUrl}/api/v1/signals/?skip=0&limit=300&token=${token}`;
+        const url = `${this.baseUrl}/api/v1/signals/?skip=0&limit=300&symbol=${token}`;
         console.log(`Fetching signals from URL: ${url}`);
         const res = await fetch(url, {
             method: 'GET',
