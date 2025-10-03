@@ -12,7 +12,7 @@ export async function runPerpetualStrategy() {
 
   const policy = new Policy(
     240,
-    240,
+    5,
   );
 
   // Initialize database connection
