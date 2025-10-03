@@ -71,7 +71,9 @@ export class PerpStrategy {
             functionName: "balanceOf",
             args: [this.walletAddress as `0x${string}`],
         });
-        return Number(usdcBalance / 10n ** 6n)
+        const balance = Number(usdcBalance / 10n ** 6n)
+        console.log(`USDC Balance for ${this.walletAddress} is ${balance} USDC`)
+        return balance
     }
 
     async _open_full_position(side: 'long' | 'short') {
