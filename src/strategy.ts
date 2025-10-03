@@ -49,8 +49,8 @@ export class PerpStrategy {
 
 
         const now = Math.floor(Date.now() / 1000);
-        this.lastReceivedLongSignalTime = now;
-        this.lastReceivedShortSignalTime = now;
+        this.lastReceivedLongSignalTime = now - (this.keepStrategyHorizonMin * 60);
+        this.lastReceivedShortSignalTime = now - (this.keepStrategyHorizonMin * 60);
 
         this.gmx = new GMX(this.walletPrivkey);
         this.xtreamly = new Xtreamly()
