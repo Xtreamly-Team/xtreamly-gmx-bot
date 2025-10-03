@@ -78,7 +78,8 @@ export class PerpStrategy {
 
     async _open_full_position(side: 'long' | 'short') {
         console.log(`Fetching USDC balance for ${this.walletAddress} to open a full position`)
-        const positionSize = await this._check_usdc_balance()
+        const balance = await this._check_usdc_balance()
+        const positionSize = Math.floor(balance * this.leverage)
         // NOTE: Do we have to multiply by leverage here?
         const res = await this.gmx.openPosition(this.token, side, positionSize, this.leverage);
         console.log(`Opened full position ${res}`)
