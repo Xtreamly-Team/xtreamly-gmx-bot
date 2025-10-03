@@ -111,7 +111,7 @@ export class PerpStrategy {
 
             await this.monitoring.insertEvent(this.bot_id, 'execution', {})
 
-            console.log("Initializing GMX")
+            console.log(`Initializing GMX for ${this.walletAddress}`)
             await this.gmx.initialzeMarkets()
 
             const signals = await this.xtreamly.getSignals(this.token);
@@ -159,7 +159,6 @@ export class PerpStrategy {
             if (positions.length > 0) {
                 const position = positions[0];
                 console.log("Checking existing position for stop loss or take profit")
-                console.log(position)
                 const entryPrice = position.entryPrice
                 if (position.isLong) {
                     console.log(`Current long position entry price: ${entryPrice}`)
