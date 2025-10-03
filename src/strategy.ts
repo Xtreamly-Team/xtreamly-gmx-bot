@@ -69,7 +69,7 @@ export class PerpStrategy {
             // USDC_Address
             address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
             functionName: "balanceOf",
-            args: [publicClient.account.address],
+            args: [this.walletAddress as `0x${string}`],
         });
         return Number(usdcBalance / 10n ** 6n)
     }
@@ -135,7 +135,7 @@ export class PerpStrategy {
 
 
             console.log(
-                `Signal long: ${signal.long}, Signal short: ${signal.short} for ${this.token}, stop_loss: ${signal.stop_loss}, take_profit: ${signal.take_profit}`
+                `Signal long: ${signal.long}, Signal short: ${signal.short} for ${this.token}, stop_loss: ${signal.stop_loss}, take_profit: ${signal.take_profit} at ${signal.prediction_time}`
             )
 
             const allPositions = await this.gmx.getOpenPositions();
@@ -256,6 +256,8 @@ export class PerpStrategy {
                     }
 
                 }
+            } else {
+                console.log("No existing positions to check for stop loss or take profit")
             }
 
             if (signal.long) {
