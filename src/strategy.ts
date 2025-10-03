@@ -22,13 +22,14 @@ export class PerpStrategy {
     private gmx: GMX;
     private xtreamly: Xtreamly
     private monitoring: Monitoring;
-    bot_id: string;
+    private bot_id: string;
     private yieldGenerator: YieldGenerator;
 
     constructor(params: {
         bot_id: string;
         walletPrivkey: string;
         token: 'ETH' | 'SOL' | 'BTC';
+        // NOTE: This is not needed since we are using full wallet balance for position sizing. We can remove it later if everything works fine
         basePositionSize: number;
         leverage: number;
         signalHorizonMin: number;
@@ -54,9 +55,6 @@ export class PerpStrategy {
         this.xtreamly = new Xtreamly()
         this.monitoring = new Monitoring()
         console.log(`PerpSignalStrategy GMX initialized fro ${this.walletAddress} with symbol ${this.token}`)
-        // console.log(
-        // `Bot ID: ${this.bot_id}, Exchange:, Token: ${bot.token}, Size: ${bot.positionSize}, Leverage: ${bot.leverage}`
-        // );
 
     }
 
@@ -170,6 +168,11 @@ export class PerpStrategy {
                             }
                         })
                         await this.gmx.closePosition(this.token);
+                        await this.monitoring.insertEvent(this.bot_id, 'closed_position_long', {
+                            'side': position.isLong ? 'long' : 'short',
+                            'size': Number(position.sizeInUsd / usdDivisor)
+                        })
+                        await new Promise(r => setTimeout(r, 500));
                         await this._try_depositing_to_yield_generator()
                         return
                     }
@@ -185,6 +188,11 @@ export class PerpStrategy {
                             }
                         })
                         await this.gmx.closePosition(this.token);
+                        await this.monitoring.insertEvent(this.bot_id, 'closed_position_long', {
+                            'side': position.isLong ? 'long' : 'short',
+                            'size': Number(position.sizeInUsd / usdDivisor)
+                        })
+                        await new Promise(r => setTimeout(r, 500));
                         await this._try_depositing_to_yield_generator()
                         return
 
@@ -212,6 +220,11 @@ export class PerpStrategy {
                             }
                         })
                         await this.gmx.closePosition(this.token);
+                        await this.monitoring.insertEvent(this.bot_id, 'closed_position_short', {
+                            'side': position.isLong ? 'long' : 'short',
+                            'size': Number(position.sizeInUsd / usdDivisor)
+                        })
+                        await new Promise(r => setTimeout(r, 500));
                         await this._try_depositing_to_yield_generator()
                         return
                     }
@@ -227,6 +240,11 @@ export class PerpStrategy {
                             }
                         })
                         await this.gmx.closePosition(this.token);
+                        await this.monitoring.insertEvent(this.bot_id, 'closed_position_short', {
+                            'side': position.isLong ? 'long' : 'short',
+                            'size': Number(position.sizeInUsd / usdDivisor)
+                        })
+                        await new Promise(r => setTimeout(r, 500));
                         await this._try_depositing_to_yield_generator()
                         return
                     }
@@ -274,7 +292,7 @@ export class PerpStrategy {
                     console.log(`Withdrawing from yield generator to open long position`)
                     this.yieldGenerator.withdraw(this.walletPrivkey)
                     // Sleep for 2 seconds to make sure the withdrawal is processed
-                    await new Promise(r => setTimeout(r, 5000));
+                    await new Promise(r => setTimeout(r, 3000));
                     console.log("Creating a new long position")
                     await new Promise(r => setTimeout(r, 500));
 
@@ -321,7 +339,7 @@ export class PerpStrategy {
                 } else {
                     console.log(`Withdrawing from yield generator to open short position`)
                     this.yieldGenerator.withdraw(this.walletPrivkey)
-                    await new Promise(r => setTimeout(r, 5000));
+                    await new Promise(r => setTimeout(r, 3000));
                     console.log("Creating a new short position")
                     await new Promise(r => setTimeout(r, 500));
 
@@ -342,8 +360,7 @@ export class PerpStrategy {
                     if (position.isLong) {
                         console.log("Checking whether to keep long position open")
                         if (time_since_last_long_signal > this.keepStrategyHorizonMin * 60) {
-                            console.log("Haven't received long signal for a while, closing long position")
-                            console.log("Closing long position due to no recent long signal")
+                            console.log(`Haven't received long signal for a while ${time_since_last_long_signal}, exiting the long position`)
                             await this.monitoring.insertEvent(this.bot_id, 'closing_position_long_no_recent_signal', {
                                 'lastReceivedLongSignalTime': this.lastReceivedLongSignalTime,
                                 'timesinceLastLongSignal': time_since_last_long_signal,
@@ -358,6 +375,8 @@ export class PerpStrategy {
                                 'side': position.isLong ? 'long' : 'short',
                                 'size': Number(position.sizeInUsd / usdDivisor)
                             })
+                            await new Promise(r => setTimeout(r, 500));
+                            await this._try_depositing_to_yield_generator()
                         } else {
                             console.log("Keeping long position open")
                             await this.monitoring.insertEvent(this.bot_id, 'keeping_position_long', {
@@ -373,8 +392,7 @@ export class PerpStrategy {
                     } else {
                         console.log("Checking whether to keep short position open")
                         if (time_since_last_short_signal > this.keepStrategyHorizonMin * 60) {
-                            console.log("Haven't received short signal for a while, closing short position")
-                            console.log("Closing short position due to no recent short signal")
+                            console.log(`Haven't received short signal for a while ${time_since_last_short_signal}, exiting the short position`)
                             await this.monitoring.insertEvent(this.bot_id, 'closing_position_short_no_recent_signal', {
                                 'lastReceivedShortSignalTime': this.lastReceivedShortSignalTime,
                                 'timesinceLastShortSignal': time_since_last_short_signal,
@@ -389,6 +407,10 @@ export class PerpStrategy {
                                 'side': position.isLong ? 'long' : 'short',
                                 'size': Number(position.sizeInUsd / usdDivisor)
                             })
+
+
+                            await new Promise(r => setTimeout(r, 500));
+                            await this._try_depositing_to_yield_generator()
                         } else {
                             console.log("Keeping short position open")
                             await this.monitoring.insertEvent(this.bot_id, 'keeping_position_short', {
@@ -410,29 +432,8 @@ export class PerpStrategy {
                         'lastReceivedShortSignalTime': this.lastReceivedShortSignalTime,
                         'timesinceLastShortSignal': time_since_last_short_signal,
                     })
-                    console.log("Adding funds to yield generator")
-                    const publicClient = createPublicClient({
-                        chain: arbitrum,
-                        transport: http(ARB_RPC_URL),
-                    })
-                    console.log("Fetching USDC balance")
-                    let usdcBalance = await publicClient.readContract({
-                        abi: erc20Abi,
-                        // USDC_Address
-                        address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
-                        functionName: "balanceOf",
-                        args: [publicClient.account.address],
-                    });
-                    const toDeposit = Number(usdcBalance / 10n ** 6n)
-                    if (toDeposit > MIN_WALLET_FOR_YIELD) {
-                        console.log("To Deposit:", toDeposit)
-                        this.yieldGenerator.deposit(this.walletPrivkey, toDeposit)
-                        await this.monitoring.insertEvent(this.bot_id, 'depositing_to_yield_generator', { usdcBalance: Number(usdcBalance / 10n ** 6n) })
-                        return
-                    } else {
-                        console.log("Not enough USDC to deposit to yield generator, skipping deposit")
-                        await this.monitoring.insertEvent(this.bot_id, 'not_depositing_to_yield_generator', { usdcBalance: Number(usdcBalance / 10n ** 6n) })
-                    }
+                    // NOTE: This is not necessary since after each close position we call try depositing to yield generator
+                    await this._try_depositing_to_yield_generator()
                 }
             }
 
