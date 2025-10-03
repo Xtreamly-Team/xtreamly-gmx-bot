@@ -38,7 +38,7 @@ export class PerpStrategy {
     }) {
         this.bot_id = params.bot_id;
         this.walletPrivkey = params.walletPrivkey;
-        this.walletAddress = privateKeyToAccount(this.walletPrivkey).address;
+        this.walletAddress = privateKeyToAccount(this.walletPrivkey as '0x{string}').address;
         this.token = params.token;
         // this.basePositionSize = params.basePositionSize;
         this.leverage = params.leverage;
