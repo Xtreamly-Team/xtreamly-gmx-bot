@@ -29,13 +29,13 @@ export function getSwapFee(
 export function getPositionFee(
     marketInfo: MarketInfo,
     sizeDeltaUsd: bigint,
-    forPositiveImpact: boolean,
+    balanceWasImproved: boolean,
     referralInfo: { totalRebateFactor: bigint; discountFactor: bigint } | undefined,
     uiFeeFactor?: bigint
 ) {
-    const factor = forPositiveImpact
-        ? marketInfo.positionFeeFactorForPositiveImpact
-        : marketInfo.positionFeeFactorForNegativeImpact;
+    const factor = balanceWasImproved
+        ? marketInfo.positionFeeFactorForBalanceWasImproved
+        : marketInfo.positionFeeFactorForBalanceWasNotImproved;
 
     let positionFeeUsd = applyFactor(sizeDeltaUsd, factor);
     const uiFeeUsd = applyFactor(sizeDeltaUsd, uiFeeFactor ?? 0n);
@@ -48,6 +48,60 @@ export function getPositionFee(
     const discountUsd = applyFactor(totalRebateUsd, referralInfo.discountFactor);
 
     positionFeeUsd = positionFeeUsd - discountUsd;
+
+    return {
+        positionFeeUsd,
+        discountUsd,
+        totalRebateUsd,
+        uiFeeUsd,
+    };
+}
+
+export function getPositionFeeOrig(
+    marketInfo: MarketInfo,
+    sizeDeltaUsd: bigint,
+    forPositiveImpact: boolean,
+    referralInfo: { totalRebateFactor: bigint; discountFactor: bigint } | undefined,
+    uiFeeFactor?: bigint
+) {
+    console.log("Market Info")
+    console.log(marketInfo.positionFeeFactorForPositiveImpact)
+    console.log(marketInfo.positionFeeFactorForNegativeImpact)
+
+    console.log("For Positive Impact")
+    console.log(forPositiveImpact)
+
+    const factor = forPositiveImpact
+        ? marketInfo.positionFeeFactorForPositiveImpact
+        : marketInfo.positionFeeFactorForNegativeImpact;
+
+    console.log("FACTOR")
+    console.log(factor)
+
+    console.log("SIZE DELTA USD")
+    console.log(sizeDeltaUsd)
+
+    let positionFeeUsd = applyFactor(sizeDeltaUsd, factor);
+    console.log("POSITION FEE USD")
+    console.log(positionFeeUsd)
+    const uiFeeUsd = applyFactor(sizeDeltaUsd, uiFeeFactor ?? 0n);
+    console.log("UI FEE USD")
+    console.log(uiFeeUsd)
+
+    if (!referralInfo) {
+        return { positionFeeUsd, discountUsd: 0n, totalRebateUsd: 0n };
+    }
+
+    const totalRebateUsd = applyFactor(positionFeeUsd, referralInfo.totalRebateFactor);
+    console.log("TOTAL REBATE USD")
+    console.log(totalRebateUsd)
+    const discountUsd = applyFactor(totalRebateUsd, referralInfo.discountFactor);
+    console.log("DISCOUNT USD")
+    console.log(discountUsd)
+
+    positionFeeUsd = positionFeeUsd - discountUsd;
+    console.log("POSITION FEE USD AFTER DISCOUNT")
+    console.log(positionFeeUsd)
 
     return {
         positionFeeUsd,

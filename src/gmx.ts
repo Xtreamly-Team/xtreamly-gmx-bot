@@ -1,21 +1,17 @@
-const { BATCH_CONFIGS } = require("@gmx-io/sdk/configs/batch");
+import { GmxSdk } from "@gmx-io/sdk";
 
-// --- Runtime imports using CommonJS ---
-const { GmxSdk } = require('@gmx-io/sdk');
-const { createPublicClient, createWalletClient, http } = require('viem');
-const { privateKeyToAccount } = require('viem/accounts');
-const { arbitrum } = require('viem/chains');
+import { createWalletClient, http, erc20Abi } from "viem";
+import { arbitrum } from "viem/chains";
+import { privateKeyToAccount } from "viem/accounts";
 
-// --- Type imports using ESM (for TS type hints) ---
 import type { GmxSdk as GmxSdkType } from '@gmx-io/sdk';
-import { MarketInfo, MarketsInfoData } from '@gmx-io/sdk/build/types/src/types/markets';
+import { MarketsInfoData } from '@gmx-io/sdk/build/types/src/types/markets';
 import { PositionInfo } from '@gmx-io/sdk/build/types/src/types/positions';
 import { TokensData } from '@gmx-io/sdk/build/types/src/types/tokens';
-import { BigNumber } from 'ethers';
-import type { WalletClient, PublicClient } from 'viem';
 
-import { erc20Abi } from "viem";
-import { getDecreasePositionAmounts } from './decrease';
+import { BATCH_CONFIGS } from "@gmx-io/sdk/configs/batch";
+import { getContract } from '@gmx-io/sdk/configs/contracts';
+import { getDecreasePositionAmounts } from "./decrease";
 
 
 export class GMX {
@@ -40,24 +36,19 @@ export class GMX {
         const rpcUrl = process.env.ARB_RPC_URL;
         const fixedPrivateKey = privateKey.startsWith('0x') ? privateKey : '0x' + privateKey;
         const account = privateKeyToAccount(fixedPrivateKey);
-
+        const walletClient = createWalletClient({
+            account,
+            chain: arbitrum,
+            transport: http(rpcUrl, {
+                batch: BATCH_CONFIGS[arbitrum.id].http
+            }),
+        });
         this.sdk = new GmxSdk({
             chainId: arbitrum.id,
-            rpcUrl,
-            oracleUrl: 'https://arbitrum-api.gmxinfra.io',
-            subsquidUrl: 'https://gmx.squids.live/gmx-synthetics-arbitrum:prod/api/graphql',
-            publicClient: createPublicClient({
-                chain: arbitrum,
-                transport: http(rpcUrl),
-                batch: BATCH_CONFIGS[arbitrum.id].client,
-            }),
-            walletClient: createWalletClient({
-                account,
-                chain: arbitrum,
-                transport: http(rpcUrl, {
-                    batch: BATCH_CONFIGS[arbitrum.id].http
-                }),
-            }),
+            rpcUrl: "https://arb1.arbitrum.io/rpc",
+            oracleUrl: "https://arbitrum-api.gmxinfra.io",
+            subsquidUrl: "https://gmx.squids.live/gmx-synthetics-arbitrum:prod/api/graphql",
+            walletClient: walletClient,
         });
 
         this.sdk.setAccount(account.address);
@@ -89,6 +80,11 @@ export class GMX {
         }
     }
 
+    _marketAddressToMarket(marketAddress: string): 'ETH' | 'BTC' | 'SOL' | null {
+        return Object.keys(this.marketAddresses).find(market => this.marketAddresses[market].toLowerCase() === marketAddress.toLowerCase()) as 'ETH' | 'BTC' | 'SOL' | null;
+
+    }
+
     async _ensureTokenBalanceAndAllowance(amount: bigint) {
 
         const balance = await this.sdk.publicClient.readContract({
@@ -105,13 +101,19 @@ export class GMX {
             console.log("Sufficient balance for USDC, needed: ", (amount / 1_000_000n).toString(), " got:", (balance / 1_000_000n).toString());
         }
 
+        // const exchangeRouterAddress = '0x87d66368cD08a7Ca42252f5ab44B2fb6d1Fb8d15'
+        const exchangeRouterAddress = getContract(arbitrum.id, 'SyntheticsRouter')
+        console.log(exchangeRouterAddress)
+
         const allowance = await this.sdk.publicClient.readContract({
             abi: erc20Abi,
             address: this.tokenAddresses['USDC'] as `0x${string}`,
             functionName: "allowance",
-            args: [this.sdk.walletClient.account!.address, '0x602b805EedddBbD9ddff44A7dcBD46cb07849685'],
+            args: [this.sdk.walletClient.account!.address, exchangeRouterAddress],
         });
         if (allowance >= amount) {
+            // if (allowance < amount) {
+            console.log("Sufficient allowance for USDC, allowance: ", (allowance / 1_000_000n).toString(), "Needed:", (amount / 1_000_000n).toString());
             return true;
         }
         else {
@@ -120,10 +122,10 @@ export class GMX {
                 abi: erc20Abi,
                 address: this.tokenAddresses['USDC'] as `0x${string}`,
                 functionName: "approve",
-                // args: ['0x602b805EedddBbD9ddff44A7dcBD46cb07849685', 2390872455461035n],
-                args: ['0x602b805EedddBbD9ddff44A7dcBD46cb07849685', amount],
+                // args: ['0x602b805EedddBbD9ddff44A7dcBD46cb07849685', amount],
+                args: [exchangeRouterAddress, amount],
                 account: this.sdk.walletClient.account || null,
-                chain: null,
+                chain: arbitrum,
             })
             console.log(res)
             console.log("Increased allowance to", (amount / 1_000_000n).toString());
@@ -133,15 +135,18 @@ export class GMX {
 
     async openPosition(market: 'ETH' | 'BTC' | 'SOL', side: 'long' | 'short', amount: number, leverage: number = 5, baseToken: string = 'USDC') {
 
-
-        await this._ensureTokenBalanceAndAllowance(BigInt(amount) * 10n ** 6n); // IN USDC
-
         const payAmount = Math.floor(amount / leverage);
+
+        await this._ensureTokenBalanceAndAllowance(BigInt(payAmount + 1) * 10n ** 6n); // IN USDC
+
+        // const payAmount = amount
+        console.log("Pay amount:", payAmount, " for total size:", amount, " with leverage:", leverage);
 
         if (!this.marketAddresses[market]) {
             console.error(`Market ${market} not initialized`);
             return;
         }
+
         console.log(this.marketAddresses[market], "Market address for", market);
         if (side == 'long') {
             console.log("Opening long")
@@ -153,8 +158,10 @@ export class GMX {
                 allowedSlippageBps: 125,
                 leverage: BigInt(leverage) * 10n ** 4n,
             });
+            await new Promise(r => setTimeout(r, 5000));
             return res
         } else if (side == 'short') {
+            console.log("Opening short")
             const res = await this.sdk.orders.short({
                 payAmount: BigInt(payAmount) * 10n ** 6n, // IN USDC
                 marketAddress: this.marketAddresses[market],
@@ -163,12 +170,12 @@ export class GMX {
                 allowedSlippageBps: 125,
                 leverage: BigInt(leverage) * 10n ** 4n,
             });
+            await new Promise(r => setTimeout(r, 5000));
             return res
         } else {
             throw new Error(`Unknown side: ${side}`);
         }
     }
-
 
     async getOpenPositions() {
         const openPositions = await this.sdk.positions.getPositionsInfo({
@@ -179,7 +186,7 @@ export class GMX {
         let positions: Record<string, PositionInfo[]> = {}
 
         for (let position of Object.values(openPositions)) {
-            const market = this.marketAddressToMarket(position.marketAddress);
+            const market = this._marketAddressToMarket(position.marketAddress);
             if (market) {
                 if (!positions[market]) {
                     positions[market] = [];
@@ -190,35 +197,41 @@ export class GMX {
 
         return positions
     }
-
+    //
     async _closePosition(position: PositionInfo, baseToken: 'USDC', allowedSlippageBps: number = 10000) {
+        console.log(`Closing position`)
+        const decreaseAmounts = getDecreasePositionAmounts({
+            marketInfo: position.marketInfo!,
+            collateralToken: this.tokensData[this.tokenAddresses[baseToken]],
+            isLong: position.isLong,
+            position: position,
+            closeSizeUsd: position.sizeInUsd,
+            keepLeverage: true,
+
+            userReferralInfo: undefined,
+            minCollateralUsd: 0n,
+            minPositionSizeUsd: 0n,
+            uiFeeFactor: 0n,
+            isLimit: false,
+            limitPrice: undefined,
+            receiveToken: this.tokensData[this.tokenAddresses[baseToken]],
+            isSetAcceptablePriceImpactEnabled: true,
+        })
         const tx = await this.sdk.orders.createDecreaseOrder({
             marketInfo: position.marketInfo!,
             marketsInfoData: this.marketsInfoData,
             tokensData: this.tokensData,
             isLong: position.isLong,
             allowedSlippage: allowedSlippageBps,
-            decreaseAmounts: getDecreasePositionAmounts({
-                marketInfo: position.marketInfo!,
-                collateralToken: this.tokensData[this.tokenAddresses[baseToken]],
-                isLong: position.isLong,
-                position: position,
-                closeSizeUsd: position.sizeInUsd,
-                keepLeverage: true,
-                userReferralInfo: undefined,
-                minCollateralUsd: 0n,
-                minPositionSizeUsd: 0n,
-                uiFeeFactor: 0n,
-                isLimit: false,
-                receiveToken: this.tokensData[this.tokenAddresses[baseToken]],
-
-            }),
+            decreaseAmounts: decreaseAmounts,
             collateralToken: this.tokensData[this.tokenAddresses[baseToken]],
             referralCode: undefined,
             isTrigger: false,
         });
+        // Just to make sure the tx is printed after it's mined
+        await new Promise(r => setTimeout(r, 5000));
     }
-
+    //
     async closePosition(market: 'ETH' | 'BTC' | 'SOL', allowedSlippageBps: number = 10000) {
         const marketPositions = await this.getOpenPositions();
         if (!marketPositions[market] || marketPositions[market].length == 0) {
@@ -230,12 +243,6 @@ export class GMX {
         }
         const position: PositionInfo = marketPositions[market][0];
         await this._closePosition(position, 'USDC', allowedSlippageBps)
-    }
-
-
-    marketAddressToMarket(marketAddress: string): 'ETH' | 'BTC' | 'SOL' | null {
-        return Object.keys(this.marketAddresses).find(market => this.marketAddresses[market].toLowerCase() === marketAddress.toLowerCase()) as 'ETH' | 'BTC' | 'SOL' | null;
-
     }
 
     getSdk() {

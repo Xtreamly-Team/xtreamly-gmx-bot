@@ -48,6 +48,113 @@ export function getOrderThresholdType(orderType: OrderType, isLong: boolean) {
 export function getAcceptablePriceInfo(p: {
     marketInfo: MarketInfo;
     isIncrease: boolean;
+    isLimit: boolean;
+    isLong: boolean;
+    indexPrice: bigint;
+    sizeDeltaUsd: bigint;
+    maxNegativePriceImpactBps?: bigint;
+}) {
+    const { marketInfo, isIncrease, isLong, indexPrice, sizeDeltaUsd, maxNegativePriceImpactBps } = p;
+    const { indexToken } = marketInfo;
+
+    const values = {
+        acceptablePrice: 0n,
+        acceptablePriceDeltaBps: 0n,
+        priceImpactDeltaAmount: 0n,
+        priceImpactDeltaUsd: 0n,
+        priceImpactDiffUsd: 0n,
+        balanceWasImproved: false,
+    };
+
+    if (sizeDeltaUsd <= 0 || indexPrice == 0n) {
+        return values;
+    }
+
+    const shouldFlipPriceImpact = getShouldUseMaxPrice(p.isIncrease, p.isLong);
+
+    // For Limit / Trigger orders
+    if (maxNegativePriceImpactBps !== undefined && maxNegativePriceImpactBps > 0) {
+        let priceDelta = bigMath.mulDiv(indexPrice, maxNegativePriceImpactBps, BASIS_POINTS_DIVISOR_BIGINT);
+        priceDelta = shouldFlipPriceImpact ? priceDelta * -1n : priceDelta;
+
+        values.acceptablePrice = indexPrice - priceDelta;
+        values.acceptablePriceDeltaBps = maxNegativePriceImpactBps * -1n;
+
+        const priceImpact = getPriceImpactByAcceptablePrice({
+            sizeDeltaUsd,
+            acceptablePrice: values.acceptablePrice,
+            indexPrice,
+            isLong,
+            isIncrease,
+        });
+
+        values.priceImpactDeltaUsd = priceImpact.priceImpactDeltaUsd;
+        values.priceImpactDeltaAmount = priceImpact.priceImpactDeltaAmount;
+
+        return values;
+    }
+
+    const { priceImpactDeltaUsd, balanceWasImproved } = getCappedPositionImpactUsd(
+        marketInfo,
+        sizeDeltaUsd,
+        isLong,
+        isIncrease,
+        {
+            fallbackToZero: !isIncrease,
+            shouldCapNegativeImpact: false,
+        }
+    );
+
+    /**
+     * We display this value as price impact on action (increase or decrease)
+     * But for acceptable price calculation uncapped price impact is used
+     * Also on decrease action we calculate totalImpactUsd which will be deducted from the collateral
+     */
+    values.priceImpactDeltaUsd = priceImpactDeltaUsd;
+    values.balanceWasImproved = balanceWasImproved;
+
+    if (values.priceImpactDeltaUsd > 0) {
+        values.priceImpactDeltaAmount = convertToTokenAmount(
+            values.priceImpactDeltaUsd,
+            indexToken.decimals,
+            indexToken.prices.maxPrice
+        )!;
+    } else {
+        values.priceImpactDeltaAmount = roundUpMagnitudeDivision(
+            values.priceImpactDeltaUsd * expandDecimals(1, indexToken.decimals),
+            indexToken.prices.minPrice
+        );
+    }
+
+    // Use uncapped price impact for the acceptable price calculation
+    const { priceImpactDeltaUsd: priceImpactDeltaUsdForAcceptablePrice } = getCappedPositionImpactUsd(
+        marketInfo,
+        sizeDeltaUsd,
+        isLong,
+        isIncrease,
+        {
+            fallbackToZero: !isIncrease,
+            shouldCapNegativeImpact: false,
+        }
+    );
+
+    const acceptablePriceValues = getAcceptablePriceByPriceImpact({
+        isIncrease,
+        isLong,
+        indexPrice,
+        sizeDeltaUsd,
+        priceImpactDeltaUsd: priceImpactDeltaUsdForAcceptablePrice,
+    });
+
+    values.acceptablePrice = acceptablePriceValues.acceptablePrice;
+    values.acceptablePriceDeltaBps = acceptablePriceValues.acceptablePriceDeltaBps;
+
+    return values;
+}
+
+export function getAcceptablePriceInfoOrig(p: {
+    marketInfo: MarketInfo;
+    isIncrease: boolean;
     isLong: boolean;
     indexPrice: bigint;
     sizeDeltaUsd: bigint;

@@ -7,6 +7,7 @@ import { Token, TokenData } from "../types/tokens.js";
 
 import { bigMath } from "./bigmath.js";
 import { getPositionFee, getPriceImpactForPosition } from "./fees";
+import { capPositionImpactUsdByMaxImpactPool, capPositionImpactUsdByMaxPriceImpactFactor, getMaxPositionImpactFactors, getProportionalPendingImpactValues } from "./fees/priceImpact.js";
 import { getCappedPoolPnl, getMarketPnl, getPoolUsdWithoutPnl } from "./markets";
 import { applyFactor, expandDecimals } from "./numbers";
 import { convertToUsd, getIsEquivalentTokens } from "./tokens";
@@ -224,4 +225,73 @@ export function getLiquidationPrice(p: {
     }
 
     return liquidationPrice;
+}
+
+export function getNetPriceImpactDeltaUsdForDecrease({
+    marketInfo,
+    sizeInUsd,
+    pendingImpactAmount,
+    priceImpactDeltaUsd,
+    sizeDeltaUsd,
+}: {
+    marketInfo: MarketInfo;
+    sizeInUsd: bigint;
+    pendingImpactAmount: bigint;
+    sizeDeltaUsd: bigint;
+    priceImpactDeltaUsd: bigint;
+}) {
+
+    const { proportionalPendingImpactDeltaUsd } = getProportionalPendingImpactValues({
+        sizeInUsd,
+        sizeDeltaUsd,
+        pendingImpactAmount,
+        indexToken: marketInfo.indexToken,
+    });
+
+    let totalImpactDeltaUsd = priceImpactDeltaUsd + proportionalPendingImpactDeltaUsd;
+
+    const priceImpactDiffUsd = getPriceImpactDiffUsd({
+        totalImpactDeltaUsd,
+        marketInfo,
+        sizeDeltaUsd,
+    });
+
+    if (totalImpactDeltaUsd > 0) {
+        totalImpactDeltaUsd = capPositionImpactUsdByMaxPriceImpactFactor(marketInfo, sizeDeltaUsd, totalImpactDeltaUsd);
+    }
+
+
+    totalImpactDeltaUsd = capPositionImpactUsdByMaxImpactPool(marketInfo, totalImpactDeltaUsd);
+
+    return {
+        totalImpactDeltaUsd,
+        proportionalPendingImpactDeltaUsd,
+        priceImpactDiffUsd,
+    };
+}
+
+export function getPriceImpactDiffUsd({
+    totalImpactDeltaUsd,
+    marketInfo,
+    sizeDeltaUsd,
+}: {
+    totalImpactDeltaUsd: bigint;
+    marketInfo: MarketInfo;
+    sizeDeltaUsd: bigint;
+}) {
+    if (totalImpactDeltaUsd > 0) {
+        return 0n;
+    }
+
+    const { maxNegativeImpactFactor } = getMaxPositionImpactFactors(marketInfo);
+
+    const maxNegativeImpactUsd = -applyFactor(sizeDeltaUsd, maxNegativeImpactFactor);
+
+    let priceImpactDiffUsd = 0n;
+
+    if (totalImpactDeltaUsd < maxNegativeImpactUsd) {
+        priceImpactDiffUsd = maxNegativeImpactUsd - totalImpactDeltaUsd;
+    }
+
+    return priceImpactDiffUsd;
 }

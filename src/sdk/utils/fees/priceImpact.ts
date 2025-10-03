@@ -81,6 +81,144 @@ export function getCappedPositionImpactUsd(
     marketInfo: MarketInfo,
     sizeDeltaUsd: bigint,
     isLong: boolean,
+    isIncrease: boolean,
+    opts: { fallbackToZero?: boolean; shouldCapNegativeImpact?: boolean } = {}
+) {
+    sizeDeltaUsd = isIncrease ? sizeDeltaUsd : sizeDeltaUsd * -1n;
+
+    const { priceImpactDeltaUsd, balanceWasImproved } = getPriceImpactForPosition(marketInfo, sizeDeltaUsd, isLong, opts);
+
+    if (priceImpactDeltaUsd < 0 && !opts.shouldCapNegativeImpact) {
+        return { priceImpactDeltaUsd, balanceWasImproved };
+    }
+
+    const cappedImpactUsd = capPositionImpactUsdByMaxPriceImpactFactor(marketInfo, sizeDeltaUsd, priceImpactDeltaUsd);
+
+    return {
+        priceImpactDeltaUsd: cappedImpactUsd,
+        balanceWasImproved,
+    };
+}
+
+export function capPositionImpactUsdByMaxPriceImpactFactor(
+    marketInfo: MarketInfo,
+    sizeDeltaUsd: bigint,
+    positionImpactDeltaUsd: bigint
+) {
+    const { maxPositiveImpactFactor, maxNegativeImpactFactor } = getMaxPositionImpactFactors(marketInfo);
+
+    const maxPriceImapctFactor = positionImpactDeltaUsd > 0 ? maxPositiveImpactFactor : maxNegativeImpactFactor;
+
+    const maxPriceImpactUsdBasedOnMaxPriceImpactFactor = applyFactor(bigMath.abs(sizeDeltaUsd), maxPriceImapctFactor);
+
+    if (bigMath.abs(positionImpactDeltaUsd) > maxPriceImpactUsdBasedOnMaxPriceImpactFactor) {
+        positionImpactDeltaUsd = maxPriceImpactUsdBasedOnMaxPriceImpactFactor * (positionImpactDeltaUsd > 0 ? 1n : -1n);
+    }
+
+    return positionImpactDeltaUsd;
+}
+
+export function capPositionImpactUsdByMaxImpactPool(marketInfo: MarketInfo, positionImpactDeltaUsd: bigint) {
+    if (positionImpactDeltaUsd < 0) {
+        return positionImpactDeltaUsd;
+    }
+
+    const { indexToken } = marketInfo;
+    const impactPoolAmount = marketInfo.positionImpactPoolAmount;
+    const maxPriceImpactUsdBasedOnImpactPool = convertToUsd(
+        impactPoolAmount,
+        indexToken.decimals,
+        indexToken.prices.minPrice
+    )!;
+
+    if (positionImpactDeltaUsd > maxPriceImpactUsdBasedOnImpactPool) {
+        positionImpactDeltaUsd = maxPriceImpactUsdBasedOnImpactPool;
+    }
+
+    return positionImpactDeltaUsd;
+}
+
+export function getMaxPositionImpactFactors(marketInfo: MarketInfo) {
+    let maxPositiveImpactFactor = marketInfo.maxPositionImpactFactorPositive;
+    const maxNegativeImpactFactor = marketInfo.maxPositionImpactFactorNegative;
+
+    if (maxPositiveImpactFactor > maxNegativeImpactFactor) {
+        maxPositiveImpactFactor = maxNegativeImpactFactor;
+    }
+
+    return { maxPositiveImpactFactor, maxNegativeImpactFactor };
+}
+
+export function getPriceImpactForPosition(
+    marketInfo: MarketInfo,
+    sizeDeltaUsd: bigint,
+    isLong: boolean,
+    opts: { fallbackToZero?: boolean } = {}
+) {
+    const { longInterestUsd, shortInterestUsd } = marketInfo;
+
+    const { currentLongUsd, currentShortUsd, nextLongUsd, nextShortUsd } = getNextOpenInterestParams({
+        currentLongUsd: longInterestUsd,
+        currentShortUsd: shortInterestUsd,
+        usdDelta: sizeDeltaUsd,
+        isLong: isLong!,
+    });
+
+    const { priceImpactDeltaUsd, balanceWasImproved } = getPriceImpactUsd({
+        currentLongUsd,
+        currentShortUsd,
+        nextLongUsd,
+        nextShortUsd,
+        factorPositive: marketInfo.positionImpactFactorPositive,
+        factorNegative: marketInfo.positionImpactFactorNegative,
+        exponentFactor: marketInfo.positionImpactExponentFactor,
+        fallbackToZero: opts.fallbackToZero,
+    });
+
+    if (priceImpactDeltaUsd > 0) {
+        return {
+            priceImpactDeltaUsd,
+            balanceWasImproved,
+        };
+    }
+
+    if (bigMath.abs(marketInfo.virtualInventoryForPositions) <= 0) {
+        return {
+            priceImpactDeltaUsd,
+            balanceWasImproved,
+        };
+    }
+
+    const virtualInventoryParams = getNextOpenInterestForVirtualInventory({
+        virtualInventory: marketInfo.virtualInventoryForPositions,
+        usdDelta: sizeDeltaUsd,
+        isLong: isLong!,
+    });
+
+    const { priceImpactDeltaUsd: priceImpactUsdForVirtualInventory } = getPriceImpactUsd({
+        currentLongUsd: virtualInventoryParams.currentLongUsd,
+        currentShortUsd: virtualInventoryParams.currentShortUsd,
+        nextLongUsd: virtualInventoryParams.nextLongUsd,
+        nextShortUsd: virtualInventoryParams.nextShortUsd,
+        factorPositive: marketInfo.positionImpactFactorPositive,
+        factorNegative: marketInfo.positionImpactFactorNegative,
+        exponentFactor: marketInfo.positionImpactExponentFactor,
+        fallbackToZero: opts.fallbackToZero,
+    });
+
+    return {
+        priceImpactDeltaUsd:
+            priceImpactUsdForVirtualInventory < priceImpactDeltaUsd!
+                ? priceImpactUsdForVirtualInventory
+                : priceImpactDeltaUsd!,
+        balanceWasImproved,
+    };
+}
+
+export function getCappedPositionImpactUsdOrig(
+    marketInfo: MarketInfo,
+    sizeDeltaUsd: bigint,
+    isLong: boolean,
     opts: { fallbackToZero?: boolean } = {}
 ) {
     const priceImpactDeltaUsd = getPriceImpactForPosition(marketInfo, sizeDeltaUsd, isLong, opts);
@@ -115,7 +253,33 @@ export function getCappedPositionImpactUsd(
     return cappedImpactUsd;
 }
 
-export function getPriceImpactForPosition(
+export function getProportionalPendingImpactValues({
+    sizeInUsd,
+    pendingImpactAmount,
+    sizeDeltaUsd,
+    indexToken,
+}: {
+    sizeInUsd: bigint;
+    pendingImpactAmount: bigint;
+    sizeDeltaUsd: bigint;
+    indexToken: TokenData;
+}) {
+    const proportionalPendingImpactDeltaAmount =
+        sizeDeltaUsd !== 0n && sizeInUsd !== 0n
+            ? bigMath.mulDiv(pendingImpactAmount, sizeDeltaUsd, sizeInUsd, pendingImpactAmount < 0n)
+            : 0n;
+
+
+    const proportionalPendingImpactDeltaUsd = convertToUsd(
+        proportionalPendingImpactDeltaAmount,
+        indexToken.decimals,
+        proportionalPendingImpactDeltaAmount > 0 ? indexToken.prices.minPrice : indexToken.prices.maxPrice
+    )!;
+
+    return { proportionalPendingImpactDeltaAmount, proportionalPendingImpactDeltaUsd };
+}
+
+export function getPriceImpactForPositionOrig(
     marketInfo: MarketInfo,
     sizeDeltaUsd: bigint,
     isLong: boolean,
@@ -330,10 +494,68 @@ export function getNextPoolAmountsParams(p: {
     };
 }
 
+export function getPriceImpactUsd(p: {
+    currentLongUsd: bigint;
+    currentShortUsd: bigint;
+    nextLongUsd: bigint;
+    nextShortUsd: bigint;
+    factorPositive: bigint;
+    factorNegative: bigint;
+    exponentFactor: bigint;
+    fallbackToZero?: boolean;
+}) {
+    const { nextLongUsd, nextShortUsd } = p;
+
+    if (nextLongUsd < 0 || nextShortUsd < 0) {
+        if (p.fallbackToZero) {
+            return {
+                priceImpactDeltaUsd: 0n,
+                balanceWasImproved: false,
+            };
+        } else {
+            throw new Error("Negative pool amount");
+        }
+    }
+
+    const currentDiff = bigMath.abs(p.currentLongUsd - p.currentShortUsd);
+    const nextDiff = bigMath.abs(nextLongUsd - nextShortUsd);
+
+    const isSameSideRebalance = p.currentLongUsd < p.currentShortUsd === nextLongUsd < nextShortUsd;
+
+    let priceImpactDeltaUsd: bigint;
+
+    const balanceWasImproved = nextDiff < currentDiff;
+    if (isSameSideRebalance) {
+        const hasPositiveImpact = nextDiff < currentDiff;
+        const factor = hasPositiveImpact ? p.factorPositive : p.factorNegative;
+
+        priceImpactDeltaUsd = calculateImpactForSameSideRebalance({
+            currentDiff,
+            nextDiff,
+            hasPositiveImpact,
+            factor,
+            exponentFactor: p.exponentFactor,
+        });
+    } else {
+        priceImpactDeltaUsd = calculateImpactForCrossoverRebalance({
+            currentDiff,
+            nextDiff,
+            factorPositive: p.factorPositive,
+            factorNegative: p.factorNegative,
+            exponentFactor: p.exponentFactor,
+        });
+    }
+
+    return {
+        priceImpactDeltaUsd,
+        balanceWasImproved,
+    };
+}
+
 /**
  * @see https://github.com/gmx-io/gmx-synthetics/blob/updates/contracts/pricing/SwapPricingUtils.sol
  */
-export function getPriceImpactUsd(p: {
+export function getPriceImpactUsdOrig(p: {
     currentLongUsd: bigint;
     currentShortUsd: bigint;
     nextLongUsd: bigint;
