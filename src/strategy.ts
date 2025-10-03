@@ -80,9 +80,8 @@ export class PerpStrategy {
         console.log(`Fetching USDC balance for ${this.walletAddress} to open a full position`)
         const balance = await this._check_usdc_balance()
         const positionSize = Math.floor(balance * this.leverage)
-        // NOTE: Do we have to multiply by leverage here?
-        const res = await this.gmx.openPosition(this.token, side, positionSize, this.leverage);
-        console.log(`Opened full position ${res}`)
+        await this.gmx.openPosition(this.token, side, positionSize, this.leverage);
+        console.log(`Opened full position`)
         await this.monitoring.insertEvent(this.bot_id, 'opened_position_long', {
             'positionSize': positionSize,
             'leverage': this.leverage,
