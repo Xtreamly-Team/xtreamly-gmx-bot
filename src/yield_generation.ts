@@ -5,10 +5,9 @@ export class YieldGenerator {
         this.yieldGenerationUrl = yieldGenerationUrl;
     }
 
-    async deposit(privateKey: string, amount: number): Promise<any> {
-        const url = new URL(`${this.yieldGenerationUrl}/deposit`);
+    async deposit(privateKey: string): Promise<any> {
+        const url = new URL(`${this.yieldGenerationUrl}/collect_and_deposit`);
         url.searchParams.append("wallet", privateKey);
-        url.searchParams.append("amount", amount.toString());
 
         const res = await fetch(url.toString(), { method: "POST" });
         const data = await res.json();

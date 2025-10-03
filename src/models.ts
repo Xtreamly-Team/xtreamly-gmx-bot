@@ -39,7 +39,7 @@ export class Policy {
     signalHorizonMin: number;
     keepStrategyHorizonMin: number;
 
-    constructor(signalHorizonMin: number = 240, keepStrategyHorizonMin: number = 60) {
+    constructor(signalHorizonMin: number = 240, keepStrategyHorizonMin: number = 240) {
         this.signalHorizonMin = signalHorizonMin;
         this.keepStrategyHorizonMin = keepStrategyHorizonMin;
     }

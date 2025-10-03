@@ -11,8 +11,8 @@ const port = parseInt(process.env.PORT || "3000", 10);
 app.post("/run-strategy", async (req, res) => {
   try {
     console.info("Run strategy called")
-    await runPerpetualStrategy();
-    res.json({ status: "success", message: "Strategy run initiated." });
+    const strategyRes = await runPerpetualStrategy();
+    res.json(strategyRes);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Internal Server Error" });

@@ -8,9 +8,12 @@ let strategy: PerpStrategy;
 
 export async function runPerpetualStrategy() {
   const _start = new Date();
-  console.log("Running strategy at: ", new Date().toISOString());
+  console.log("Starting strategy at: ", new Date().toISOString());
 
-  const policy = new Policy();
+  const policy = new Policy(
+    240,
+    240,
+  );
 
   // Initialize database connection
   try {
@@ -21,10 +24,11 @@ export async function runPerpetualStrategy() {
   }
 
   try {
-    // NOTE: This takes a second
     const botRegistry = new BotRegistry();
+
+    console.log(`Reading GMX active bots`)
     const bots = await botRegistry.readBots();
-    console.log(`Found ${bots.length} active bots`);
+    console.log(`Found ${bots.length} active GMX bots`);
 
     for (let bot of bots) {
       try {
@@ -38,9 +42,6 @@ export async function runPerpetualStrategy() {
           keepStrategyHorizonMin: policy.keepStrategyHorizonMin,
           baseAsset: "USDC",
         });
-        console.log(
-          `Bot ID: ${bot.id}, Exchange: ${bot.exchange}, Token: ${bot.token}, Size: ${bot.positionSize}, Leverage: ${bot.leverage}`
-        );
         await strategy.execute()
       } catch (e) {
         console.error(`Error executing strategy for bot ID ${bot.id}:`, e);
@@ -53,9 +54,14 @@ export async function runPerpetualStrategy() {
   }
 
   console.log(
-    `Task completed in ${(new Date().getTime() - _start.getTime()) / 1000
+    `Whole strategy execution completed in ${(new Date().getTime() - _start.getTime()) / 1000
     } seconds`
   );
+
+  return {
+    status: "success",
+    message: "Strategy execution completed"
+  }
 }
 
 export async function startInstance() {

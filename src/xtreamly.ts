@@ -7,6 +7,7 @@ interface Signal {
     horizon: number
     stop_loss: number
     take_profit: number
+    prediction_time: string
 }
 
 export class Xtreamly {
@@ -18,8 +19,8 @@ export class Xtreamly {
         }
     }
 
-    async getSignals() {
-        const res = await fetch(`${this.baseUrl}/api/v1/signals/latest?limit=3`, {
+    async getSignals(token: string) {
+        const res = await fetch(`${this.baseUrl}/api/v1/signals/?skip=0&limit=300&token=${token}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -37,6 +38,7 @@ export class Xtreamly {
                 horizon: s.horizon,
                 stop_loss: s.stop_loss,
                 take_profit: s.take_profit,
+                prediction_time: s.prediction_time,
             }
         })
         return signals
