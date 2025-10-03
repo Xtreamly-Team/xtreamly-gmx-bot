@@ -58,7 +58,7 @@ jobs:
             --region=${{ env.REGION }} \
             --platform=managed \
             --set-env-vars="NODE_ENV=production,GCP_PROJECT_ID=xtreamly-ai,GCP_REGION=europe-west1,GOOGLE_CLOUD_PROJECT=xtreamly-ai,MONITORING_DB_NAME=bot_events,XTREAMLY_API_BASE_URL=${{ env.XTREAMLY_API_BASE_URL }}" \
-            --set-secrets="DB_HOST=DB_HOST:latest,DB_USER=DB_USER:latest,DB_PASSWORD=DB_PASSWORD:latest,DB_PORT=DB_PORT:latest,DB_NAME=DB_NAME:latest,ARB_RPC_URL=ARB_RPC_URL:latest,USER_MANAGEMENT_DB_NAME=USER_MANAGEMENT_DB_NAME:latest"
+            --set-secrets="DB_HOST=DB_HOST:latest,DB_USER=DB_USER:latest,DB_PASSWORD=DB_PASSWORD:latest,DB_PORT=DB_PORT:latest,DB_NAME=DB_NAME:latest,ARB_RPC_URL=ARB_RPC_URL:latest,USER_MANAGEMENT_DB_NAME=USER_MANAGEMENT_DB_NAME:latest,SENTRY_DSN=SENTRY_DSN_XTREAMLY_GMX_BOT:latest,MIN_WALLET_FOR_YIELD=MIN_WALLET_FOR_YIELD:latest,YIELD_GENERATION_URL=YIELD_GENERATION_URL:latest"
 
       - name: Verify deployment
         run: |
