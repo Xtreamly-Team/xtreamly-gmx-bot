@@ -137,7 +137,7 @@ export class GMX {
 
         const payAmount = Math.floor(amount / leverage);
 
-        await this._ensureTokenBalanceAndAllowance(BigInt(payAmount + 1) * 10n ** 6n); // IN USDC
+        await this._ensureTokenBalanceAndAllowance(BigInt(payAmount) * 10n ** 6n); // IN USDC
 
         // const payAmount = amount
         console.log("Pay amount:", payAmount, " for total size:", amount, " with leverage:", leverage);
