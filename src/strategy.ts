@@ -28,6 +28,7 @@ export class PerpStrategy {
     constructor(params: {
         bot_id: string;
         walletPrivkey: string;
+        walletAddress: string;
         token: 'ETH' | 'SOL' | 'BTC';
         // NOTE: This is not needed since we are using full wallet balance for position sizing. We can remove it later if everything works fine
         basePositionSize: number;
@@ -38,7 +39,7 @@ export class PerpStrategy {
     }) {
         this.bot_id = params.bot_id;
         this.walletPrivkey = params.walletPrivkey;
-        this.walletAddress = privateKeyToAccount(this.walletPrivkey as '0x{string}').address;
+        this.walletAddress = params.walletAddress;
         this.token = params.token;
         // this.basePositionSize = params.basePositionSize;
         this.leverage = params.leverage;

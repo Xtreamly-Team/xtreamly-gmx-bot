@@ -35,6 +35,7 @@ export async function runPerpetualStrategy() {
         strategy = new PerpStrategy({
           bot_id: String(bot.id),
           walletPrivkey: bot.walletPrivateKey,
+          walletAddress: bot.walletAddress,
           token: bot.token,
           basePositionSize: bot.positionSize,
           leverage: bot.leverage,
