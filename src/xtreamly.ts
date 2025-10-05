@@ -26,6 +26,7 @@ export class Xtreamly {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
+                'X-API-KEY': process.env.XTREAMLY_USER_MANAGEMENT_API_KEY || ''
             },
         })
         if (!res.ok) {
