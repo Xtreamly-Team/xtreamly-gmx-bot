@@ -116,8 +116,8 @@ export class PerpStrategy {
 
             const signals = await this.xtreamly.getSignals(this.token);
 
-            const signal = signals[signals.length - 1];
-            const firstSignal = signals[0];
+            const firstSignal = signals[signals.length - 1];
+            const signal = signals[0];
             console.log(`Fetched ${signals.length} signals`);
             console.log(`First signal: ${firstSignal.symbol}, Long: ${firstSignal.long}, Short: ${firstSignal.short}, Horizon: ${firstSignal.horizon} minutes, ${firstSignal.stop_loss} Stop loss, ${firstSignal.take_profit} at ${firstSignal.prediction_time}`);
             console.log(`Last signal: ${signal.symbol}, Long: ${signal.long}, Short: ${signal.short}, Horizon: ${signal.horizon} minutes, ${signal.stop_loss} Stop loss, ${signal.take_profit} at ${signal.prediction_time}`);
