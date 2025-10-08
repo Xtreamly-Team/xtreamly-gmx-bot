@@ -1,5 +1,4 @@
 import { createPublicClient, erc20Abi, http } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
 import { ARB_RPC_URL, getYieldGenerationUrl, MIN_WALLET_FOR_YIELD } from "./config";
 import { Monitoring } from "./db";
 import { GMX } from "./gmx";
@@ -11,10 +10,7 @@ export class PerpStrategy {
     private walletPrivkey: string;
     private walletAddress: string;
     private token: 'ETH' | 'SOL' | 'BTC';
-    private baseAsset: string;
-    // private basePositionSize: number;
     private leverage: number;
-    private signalHorizonMin: number;
     private keepStrategyHorizonMin: number;
     private lastReceivedLongSignalTime: number;
     private lastReceivedShortSignalTime: number;
@@ -41,11 +37,8 @@ export class PerpStrategy {
         this.walletPrivkey = params.walletPrivkey;
         this.walletAddress = params.walletAddress;
         this.token = params.token;
-        // this.basePositionSize = params.basePositionSize;
         this.leverage = params.leverage;
-        this.signalHorizonMin = params.signalHorizonMin;
         this.keepStrategyHorizonMin = params.keepStrategyHorizonMin ?? 240;
-        this.baseAsset = params.baseAsset ?? "USDC";
 
 
         const now = Math.floor(Date.now() / 1000);
@@ -66,7 +59,6 @@ export class PerpStrategy {
         })
         let usdcBalance = await publicClient.readContract({
             abi: erc20Abi,
-            // USDC_Address
             address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
             functionName: "balanceOf",
             args: [this.walletAddress as `0x${string}`],
@@ -443,7 +435,6 @@ export class PerpStrategy {
                         'lastReceivedShortSignalTime': this.lastReceivedShortSignalTime,
                         'timesinceLastShortSignal': time_since_last_short_signal,
                     })
-                    // NOTE: This is not necessary since after each close position we call try depositing to yield generator
                     await this._try_depositing_to_yield_generator()
                 }
             }
