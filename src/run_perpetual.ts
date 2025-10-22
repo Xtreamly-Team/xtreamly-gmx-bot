@@ -30,9 +30,9 @@ export async function runPerpetualStrategy() {
     const bots = await botRegistry.readBots();
     console.log(`Found ${bots.length} active GMX bots`);
 
-    for (let bot of bots) {
+    const promises = bots.map(async (bot) => {
       try {
-        strategy = new PerpStrategy({
+        const strategy = new PerpStrategy({
           bot_id: String(bot.id),
           walletPrivkey: bot.walletPrivateKey,
           walletAddress: bot.walletAddress,
@@ -43,11 +43,44 @@ export async function runPerpetualStrategy() {
           keepStrategyHorizonMin: policy.keepStrategyHorizonMin,
           baseAsset: "USDC",
         });
-        await strategy.execute()
+
+        await strategy.execute();
+        return { botId: bot.id, status: "fulfilled" };
       } catch (e) {
         console.error(`Error executing strategy for bot ID ${bot.id}:`, e);
+        return { botId: bot.id, status: "rejected", error: e };
+      }
+    });
+
+    const results = await Promise.allSettled(promises);
+
+    // Optional: handle/report results
+    for (const result of results) {
+      if (result.status === "fulfilled") {
+        console.log(`Bot ${result.value.botId} finished successfully`);
+      } else {
+        console.warn(`Bot execution failed:`, result.reason);
       }
     }
+
+    // for (let bot of bots) {
+    //   try {
+    //     strategy = new PerpStrategy({
+    //       bot_id: String(bot.id),
+    //       walletPrivkey: bot.walletPrivateKey,
+    //       walletAddress: bot.walletAddress,
+    //       token: bot.token,
+    //       basePositionSize: bot.positionSize,
+    //       leverage: bot.leverage,
+    //       signalHorizonMin: policy.signalHorizonMin,
+    //       keepStrategyHorizonMin: policy.keepStrategyHorizonMin,
+    //       baseAsset: "USDC",
+    //     });
+    //     await strategy.execute()
+    //   } catch (e) {
+    //     console.error(`Error executing strategy for bot ID ${bot.id}:`, e);
+    //   }
+    // }
   } finally {
     // Clean up connection
     await userManagementDb.disconnect();
