@@ -4,6 +4,11 @@ import { BotRegistry } from "./db";
 import { Policy } from "./models";
 import { userManagementDb, monitoringDb } from "./database_interface";
 
+import pLimit from 'p-limit';
+
+// Allow only 5 strategies to run in parallel
+const limit = pLimit(20);
+
 let strategy: PerpStrategy;
 
 export async function runPerpetualStrategy() {
