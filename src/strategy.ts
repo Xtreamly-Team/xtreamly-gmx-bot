@@ -6,7 +6,7 @@ import { Xtreamly } from "./xtreamly";
 import { YieldGenerator } from "./yield_generation";
 import { arbitrum } from 'viem/chains';
 
-export class PerpStrategy {
+export class TradeStrategy {
     private walletPrivkey: string;
     private walletAddress: string;
     private token: 'ETH' | 'SOL' | 'BTC';

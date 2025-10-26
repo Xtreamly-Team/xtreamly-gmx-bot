@@ -20,6 +20,8 @@ export const XSTREAMLY_API_URL = process.env.XSTREAMLY_API_URL || 'https://api.x
 
 export const YIELD_GENERATION_URL = process.env.YIELD_GENERATION_URL
 
+export const KAFKA_BROKDER_ADDRESS = process.env.KAFKA_BROKER_ADDRESS
+
 export function getYieldGenerationUrl(): string {
     if (!YIELD_GENERATION_URL) {
         throw new Error('YIELD_GENERATION_URL is not set');

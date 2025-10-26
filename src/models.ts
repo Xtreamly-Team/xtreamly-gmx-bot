@@ -33,6 +33,21 @@ export class Bot {
         this.active = active;
         this.metadata = metadata;
     }
+
+    static fromObject(obj: Record<string, any>): Bot {
+        return new Bot(
+            obj.id,
+            obj.wallet_address,
+            obj.wallet_privatekey,
+            obj.exchange,
+            obj.token,
+            obj.position_size,
+            obj.leverage,
+            obj.initialized,
+            obj.active,
+            obj.metadata
+        )
+    }
 }
 
 export class Policy {

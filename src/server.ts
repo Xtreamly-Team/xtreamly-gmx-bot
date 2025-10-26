@@ -4,7 +4,7 @@ import swaggerJSDoc from "swagger-jsdoc";
 import helmet from "helmet";
 import { v4 as uuidv4 } from "uuid";
 
-import { runPerpetualStrategy } from "./run_perpetual.js";
+import { BotListener } from "./bot.js";
 
 const app = express();
 app.use(helmet());
@@ -30,6 +30,10 @@ const apiKeyMiddleware = (
   res: express.Response,
   next: express.NextFunction
 ) => {
+  if (process.env.NODE_ENV !== "production") {
+    next();
+    return true
+  }
   const apiKey = req.headers["x-api-key"];
   if (apiKey && apiKey === process.env.XTREAMLY_USER_MANAGEMENT_API_KEY) {
     next();
@@ -38,11 +42,30 @@ const apiKeyMiddleware = (
   }
 };
 
-app.post("/run-strategy", apiKeyMiddleware, async (req, res) => {
+app.post("/start-bot", apiKeyMiddleware, async (req, res) => {
   try {
-    console.info("Run strategy called")
-    const strategyRes = await runPerpetualStrategy();
-    res.json(strategyRes);
+    console.info("Start bot called")
+    const botListener = BotListener.getInstance()
+    await botListener.startListeningOnBots()
+    res.json({
+      "status": "success",
+      "message": "Bot started successfully",
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.post("/stop-bot", apiKeyMiddleware, async (req, res) => {
+  try {
+    console.info("Stop bot called")
+    const botListener = BotListener.getInstance()
+    await botListener.stopListeningOnBots()
+    res.json({
+      "status": "success",
+      "message": "Bot stopped successfully",
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Internal Server Error" });
