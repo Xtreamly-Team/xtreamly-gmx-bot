@@ -1,3 +1,4 @@
+import { logger } from './logging';
 /**
  * Simple database interface using raw SQL
  * Supports PostgreSQL (production)
@@ -24,9 +25,9 @@ export class DatabaseInterface {
     async connect(): Promise<void> {
         try {
             await this.client.connect();
-            console.log('Connected to PostgreSQL database');
+            logger.info('Connected to PostgreSQL database');
         } catch (error) {
-            console.error('Failed to connect to the database:', error);
+            logger.error('Failed to connect to the database:', error);
             throw error;
         }
     }
@@ -34,7 +35,7 @@ export class DatabaseInterface {
     async reconnect(): Promise<void> {
         try {
             await this.disconnect();
-            console.log('Disconnected before connecting to PostgreSQL database');
+            logger.info('Disconnected before connecting to PostgreSQL database');
         } finally {
             this.client = new Client({
                 connectionString: this.databaseUrl,
@@ -65,7 +66,7 @@ export class DatabaseInterface {
                 return result.rowCount || 0;
             }
         } catch (error) {
-            console.error('Error executing query:', error);
+            logger.error('Error executing query:', error);
             throw error;
         }
     }
@@ -75,7 +76,7 @@ export class DatabaseInterface {
             const result = await this.client.query(query, params);
             return result.rows[0] || null;
         } catch (error) {
-            console.error('Error executing query:', error);
+            logger.error('Error executing query:', error);
             throw error;
         }
     }

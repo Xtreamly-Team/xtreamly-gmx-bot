@@ -1,3 +1,4 @@
+import { logger } from "./logging";
 import { TradeStrategy } from "./strategy";
 import { Bot, Policy } from "./models";
 import { monitoringDb } from "./database_interface";
@@ -20,7 +21,7 @@ export class BotListener {
   private static instance: BotListener
 
   private constructor() {
-    console.log("BotManager initialized")
+    logger.info("BotManager initialized")
     this.kafka = new Kafka({
       // clientId: 'my-app',
       brokers: [KAFKA_BROKDER_ADDRESS]  // your Kafka broker(s)
@@ -39,18 +40,14 @@ export class BotListener {
 
   async executeBot(bot: Bot) {
     const _start = new Date();
-    console.log("Starting executing bot at: ", new Date().toISOString());
-
+    logger.info("Starting executing bot at: ", new Date().toISOString());
 
     // Initialize database connection
     try {
       await monitoringDb.reconnect();
     } catch (e) {
-      console.error(e)
+      logger.error(e)
     }
-
-    console.info(bot)
-    return true
 
     try {
       const strategy = new TradeStrategy({
@@ -65,17 +62,19 @@ export class BotListener {
         baseAsset: "USDC",
       });
 
+      logger.info(`Executing ${bot}`)
       await strategy.execute();
       return true
+
     } catch (e) {
-      console.error(`Error executing strategy for bot ID ${bot.id}:`, e);
+      logger.error(`Error executing strategy for bot ID ${bot.id}:`, e);
       return false
     } finally {
       // Clean up connection
       await monitoringDb.disconnect()
       const _end = new Date()
       const timeDiff = (_end.getTime() - _start.getTime()) / 1000
-      console.log(`Executing bot took ${timeDiff} seconds`);
+      logger.info(`Executing bot took ${timeDiff} seconds`);
 
     }
 

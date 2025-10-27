@@ -25,6 +25,7 @@
     "swagger-ui-express": "^5.0.1",
     "viem": "^2.34.0",
     "wagmi": "^2.16.4",
+    "winston": "^3.18.3",
     "yamljs": "^0.3.0"
   },
   "devDependencies": {

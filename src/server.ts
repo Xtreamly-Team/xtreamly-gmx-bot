@@ -1,3 +1,4 @@
+import { logger } from "./logging.js";
 import express from "express";
 import swaggerUi from "swagger-ui-express";
 import swaggerJSDoc from "swagger-jsdoc";
@@ -12,12 +13,12 @@ app.use(express.json());
 
 app.use((req, res, next) => {
   const request_id = uuidv4();
-  console.log(`start request request_id='${request_id}' method='${req.method}' path='${req.url}'`);
+  logger.info(`start request request_id='${request_id}' method='${req.method}' path='${req.url}'`);
   const start = Date.now();
 
   res.on('finish', () => {
     const duration = Date.now() - start;
-    console.log(`end request request_id='${request_id}' status_code='${res.statusCode}' duration='${duration}ms'`);
+    logger.info(`end request request_id='${request_id}' status_code='${res.statusCode}' duration='${duration}ms'`);
   });
 
   next();
@@ -44,7 +45,7 @@ const apiKeyMiddleware = (
 
 app.post("/start-bot", apiKeyMiddleware, async (req, res) => {
   try {
-    console.info("Start bot called")
+    logger.info("Start bot called")
     const botListener = BotListener.getInstance()
     await botListener.startListeningOnBots()
     res.json({
@@ -52,14 +53,14 @@ app.post("/start-bot", apiKeyMiddleware, async (req, res) => {
       "message": "Bot started successfully",
     });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
 app.post("/stop-bot", apiKeyMiddleware, async (req, res) => {
   try {
-    console.info("Stop bot called")
+    logger.info("Stop bot called")
     const botListener = BotListener.getInstance()
     await botListener.stopListeningOnBots()
     res.json({
@@ -67,7 +68,7 @@ app.post("/stop-bot", apiKeyMiddleware, async (req, res) => {
       "message": "Bot stopped successfully",
     });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
@@ -105,7 +106,7 @@ app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(err.stack);
+  logger.error(err.stack);
   if (process.env.NODE_ENV === "production") {
     res.status(500).json({ error: "Internal Server Error" });
   } else {
@@ -115,5 +116,5 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
 
 
 app.listen(port, "0.0.0.0", () => {
-  console.log(`Server running at port ${port}`);
+  logger.info(`Server running at port ${port}`);
 });

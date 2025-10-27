@@ -1,3 +1,4 @@
+import { logger } from "./logging";
 import { monitoringDb } from './database_interface';
 
 export class Monitoring {
@@ -14,7 +15,7 @@ export class Monitoring {
         try {
             await monitoringDb.execute(query, values);
         } catch (err) {
-            console.error('Error inserting event:', err);
+            logger.error('Error inserting event:', err);
             throw err;
         }
     }

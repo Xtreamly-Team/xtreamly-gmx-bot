@@ -1,3 +1,4 @@
+import { logger } from "./logging";
 export class YieldGenerator {
     private yieldGenerationUrl: string;
 
@@ -12,7 +13,7 @@ export class YieldGenerator {
         const res = await fetch(url.toString(), { method: "POST" });
         const data = await res.json();
 
-        console.log(data);
+        logger.info(data);
         return data;
     }
 
@@ -23,7 +24,7 @@ export class YieldGenerator {
         const res = await fetch(url.toString(), { method: "POST" });
         const data = await res.json();
 
-        console.log(data);
+        logger.info(data);
         return data;
     }
 }
