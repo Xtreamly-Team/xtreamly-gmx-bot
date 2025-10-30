@@ -4,3 +4,8 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "400m"
+        max-file: "5"

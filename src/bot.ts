@@ -91,7 +91,7 @@ export class BotListener {
 
   async _startListening(botCallback: BotCallback) {
     await this.consumer.connect()
-    await this.consumer.subscribe({ topic: 'gmx_bot', fromBeginning: true })
+    await this.consumer.subscribe({ topic: 'gmx_bot', fromBeginning: false })
 
     this.consumer.run({
       eachMessage: async ({ topic, partition, message }) => {
